@@ -165,12 +165,17 @@ const TillmanKnowledgeAssistant = () => {
             defval: ''
           });
           
-          const validRows = sheetData.filter(row => {
-            // Check if row has data
-            const hasData = Object.values(row).some(value => value && String(value).trim() !== '');
-            if (!hasData) return false;
+          const validRows = sheetData.map(row => {
+            // Normalize NTP Number column
+            // Look for any key that includes "NTP Number" (e.g., "Market 1 NTP Number", "NTP Number")
+            const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
+            const ntpValue = row[ntpKey];
 
-            // Filter out placeholder rows based on NTP Number (Column A)
+            return {
+              ...row,
+              'NTP Number': ntpValue // Standardize to single key
+            };
+          }).filter(row => {
             const ntpNumber = row['NTP Number'];
             
             // Strictly require an NTP Number
@@ -184,6 +189,10 @@ const TillmanKnowledgeAssistant = () => {
               const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
               if (isExcluded) return false;
             }
+
+            // Check if row has other meaningful data
+            const hasData = Object.values(row).some(value => value && String(value).trim() !== '');
+            if (!hasData) return false;
 
             return true;
           });
@@ -266,23 +275,25 @@ const TillmanKnowledgeAssistant = () => {
     const cleanedText = cleanTextForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleanedText);
     utterance.rate = 0.95;
-    utterance.pitch = 1.1;
+    utterance.pitch = 1.0; // Reset pitch for Moira for a more natural tone
     utterance.volume = 1.0;
     
     const voices = synthRef.current.getVoices();
     
-    // Prioritize Victoria, then Samantha, then other female voices
+    // Prioritize Moira, then Victoria, then other female voices
+    const moiraVoice = voices.find(voice => voice.name.includes('Moira'));
     const victoriaVoice = voices.find(voice => voice.name.includes('Victoria'));
     const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
     const femaleVoice = voices.find(voice => 
       voice.name.includes('Female') || 
       voice.name.includes('Karen') ||
-      voice.name.includes('Moira') ||
       voice.name.includes('Fiona') ||
       (voice.name.includes('Google') && voice.name.includes('US') && voice.lang === 'en-US')
     );
     
-    if (victoriaVoice) {
+    if (moiraVoice) {
+        utterance.voice = moiraVoice;
+    } else if (victoriaVoice) {
         utterance.voice = victoriaVoice;
     } else if (samanthaVoice) {
       utterance.voice = samanthaVoice;
