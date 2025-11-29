@@ -1,6 +1,10 @@
-import React, { useState, useRef, useEffect } from "react";
+<change>
+<file>index.tsx</file>
+<description>Add Market Progress Dashboard with Bar Chart, normalize market data extraction, and maintain existing voice features.</description>
+<content><![CDATA[import React, { useState, useRef, useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 
 // Define window interfaces for external libraries and APIs
 declare global {
@@ -10,6 +14,76 @@ declare global {
     SpeechRecognition: any;
   }
 }
+
+// Chart Component
+const MarketDashboard = ({ data }: { data: any[] }) => {
+  const chartData = useMemo(() => {
+    if (!data) return [];
+    
+    const groups: Record<string, { total: number; count: number }> = {};
+    
+    data.forEach(item => {
+      // Use the Market field we normalized, or fallback to Area
+      let market = item.Market || item.AREA || "General";
+      if (typeof market === 'string') {
+        market = market.replace(/NTP Number/i, "").trim(); // Clean up if leakage occurs
+        if (market === "" || market === "Market") market = "General"; // Fallback for empty extraction
+      }
+
+      // Clean percentage string (e.g., "65%" -> 65)
+      let pct = 0;
+      const rawPct = item['UG Percentage Complete'];
+      if (typeof rawPct === 'number') {
+        pct = rawPct <= 1 ? rawPct * 100 : rawPct; // Handle decimal vs whole number
+      } else if (typeof rawPct === 'string') {
+        pct = parseFloat(rawPct.replace('%', '').trim()) || 0;
+      }
+
+      if (!groups[market]) groups[market] = { total: 0, count: 0 };
+      groups[market].total += pct;
+      groups[market].count += 1;
+    });
+
+    return Object.keys(groups).map(k => ({
+      name: k,
+      completion: Math.round(groups[k].total / groups[k].count),
+      count: groups[k].count
+    })).sort((a, b) => b.completion - a.completion);
+  }, [data]);
+
+  if (chartData.length === 0) return null;
+
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-md border border-blue-100 mb-4 animate-fade-in">
+      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+        Market Completion Status
+      </h3>
+      <div className="h-64 w-full">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} stroke="#e5e7eb" />
+            <XAxis type="number" domain={[0, 100]} unit="%" tick={{fontSize: 12}} />
+            <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 12, fontWeight: 500}} />
+            <Tooltip 
+              cursor={{fill: '#eff6ff'}}
+              contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}
+              formatter={(value: number) => [`${value}%`, 'Completion']}
+            />
+            <Bar dataKey="completion" radius={[0, 4, 4, 0]} barSize={24}>
+              {chartData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.completion >= 80 ? '#10b981' : entry.completion >= 50 ? '#3b82f6' : '#f59e0b'} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <p className="text-xs text-gray-500 text-center mt-2">Average completion percentage based on {data?.length} active projects</p>
+    </div>
+  );
+};
 
 const TillmanKnowledgeAssistant = () => {
   const [messages, setMessages] = useState([
@@ -28,6 +102,7 @@ const TillmanKnowledgeAssistant = () => {
   const [lastDataUpdate, setLastDataUpdate] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [apiKeyError, setApiKeyError] = useState<boolean>(false);
+  const [showDashboard, setShowDashboard] = useState(false);
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
@@ -98,7 +173,7 @@ const TillmanKnowledgeAssistant = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+  }, [messages, showDashboard]);
 
   useEffect(() => {
     if (!isSpeaking && synthRef.current) {
@@ -166,14 +241,23 @@ const TillmanKnowledgeAssistant = () => {
           });
           
           const validRows = sheetData.map(row => {
-            // Normalize NTP Number column
+            // Normalize NTP Number column and Extract Market
             // Look for any key that includes "NTP Number" (e.g., "Market 1 NTP Number", "NTP Number")
             const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
             const ntpValue = row[ntpKey];
+            
+            // Extract market from header (e.g., "Market 1 NTP Number" -> "Market 1")
+            let market = ntpKey.replace("NTP Number", "").trim();
+            // If extracting failed (empty string), try to use 'AREA' or default
+            if (!market) {
+               // Cleanup to ensure we don't have trailing characters
+               market = "General";
+            }
 
             return {
               ...row,
-              'NTP Number': ntpValue // Standardize to single key
+              'NTP Number': ntpValue, // Standardize to single key
+              'Market': market // Add explicit Market field
             };
           }).filter(row => {
             const ntpNumber = row['NTP Number'];
@@ -275,7 +359,7 @@ const TillmanKnowledgeAssistant = () => {
     const cleanedText = cleanTextForSpeech(text);
     const utterance = new SpeechSynthesisUtterance(cleanedText);
     utterance.rate = 0.95;
-    utterance.pitch = 1.0; // Reset pitch for Moira for a more natural tone
+    utterance.pitch = 1.0; 
     utterance.volume = 1.0;
     
     const voices = synthRef.current.getVoices();
@@ -286,7 +370,7 @@ const TillmanKnowledgeAssistant = () => {
     const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
     const femaleVoice = voices.find(voice => 
       voice.name.includes('Female') || 
-      voice.name.includes('Karen') ||
+      voice.name.includes('Karen') || 
       voice.name.includes('Fiona') ||
       (voice.name.includes('Google') && voice.name.includes('US') && voice.lang === 'en-US')
     );
@@ -585,13 +669,18 @@ ${knowledgeBase}`;
               )}
             </div>
           </div>
-          <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-3 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
-            {autoSpeak ? (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-            ) : (
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-            )}
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setShowDashboard(!showDashboard)} className={`p-3 rounded-full transition-all ${showDashboard ? 'bg-white text-blue-600' : 'bg-white/10 hover:bg-white/20 text-white'}`} title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}>
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </button>
+            <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-3 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
+              {autoSpeak ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -616,8 +705,15 @@ ${knowledgeBase}`;
         </div>
       )}
 
+      {/* Dashboard Toggle View */}
+      {showDashboard && projectData && (
+        <div className="max-w-4xl mx-auto w-full px-4 pt-6">
+          <MarketDashboard data={projectData} />
+        </div>
+      )}
+
       {/* Quick Questions */}
-      {messages.length === 1 && (
+      {messages.length === 1 && !showDashboard && (
         <div className="max-w-4xl mx-auto w-full px-4 py-6">
           <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -710,4 +806,5 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);
+root.render(<TillmanKnowledgeAssistant />);]]></content>
+</change>
