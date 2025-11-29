@@ -58,9 +58,11 @@ const TillmanKnowledgeAssistant = () => {
 
   useEffect(() => {
     try {
+      // Use the environment variable provided by the platform
       const apiKey = process.env.API_KEY;
       if (apiKey && apiKey.trim() !== '') {
         aiRef.current = new GoogleGenAI({ apiKey: apiKey });
+        setApiKeyError(false);
       } else {
         console.warn("API Key is missing or empty.");
         setApiKeyError(true);
@@ -809,7 +811,7 @@ ${knowledgeBase}`;
         }
       });
 
-      const text = response.text || "";
+      const text = response.text;
       const assistantMessage = {
         role: 'assistant',
         content: text

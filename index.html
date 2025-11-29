@@ -41,9 +41,8 @@
     if (typeof process === 'undefined') {
       window.process = {
         env: {
-          // NOTE: If deploying to GitHub Pages, you must manually insert your API_KEY here
-          // Example: API_KEY: 'AIzaSy...'
-          API_KEY: 'AIzaSyBgHDYAOz_biWjM3ejQOG0-NVEiNEWUwxQ' 
+          // API_KEY will be injected by the build system or environment
+          API_KEY: '' 
         }
       };
     }
@@ -55,9 +54,7 @@
     "react": "https://esm.sh/react@18.2.0",
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
     "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+    "@google/genai": "https://esm.sh/@google/genai"
   }
 }
 </script>
