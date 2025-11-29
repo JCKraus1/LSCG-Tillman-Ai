@@ -1,7 +1,4 @@
-<change>
-<file>index.tsx</file>
-<description>Remove 100 project limit to send all data to AI context, and switch preferred voice to Victoria.</description>
-<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 
@@ -30,14 +27,30 @@ const TillmanKnowledgeAssistant = () => {
   const [dataLoadError, setDataLoadError] = useState<string | null>(null);
   const [lastDataUpdate, setLastDataUpdate] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
+  const [apiKeyError, setApiKeyError] = useState<boolean>(false);
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const autoRefreshInterval = useRef<any>(null);
 
-  // Initialize Google GenAI Client
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  // Initialize Google GenAI Client safely
+  const aiRef = useRef<GoogleGenAI | null>(null);
+
+  useEffect(() => {
+    try {
+      const apiKey = process.env.API_KEY;
+      if (apiKey && apiKey.trim() !== '') {
+        aiRef.current = new GoogleGenAI({ apiKey: apiKey });
+      } else {
+        console.warn("API Key is missing or empty.");
+        setApiKeyError(true);
+      }
+    } catch (e) {
+      console.error("Failed to initialize GoogleGenAI client:", e);
+      setApiKeyError(true);
+    }
+  }, []);
 
   // Initialize speech recognition and synthesis
   useEffect(() => {
@@ -114,7 +127,6 @@ const TillmanKnowledgeAssistant = () => {
       const excelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/tillman-project.xlsx';
       console.log(`Fetching Excel file from: ${excelUrl}`);
       
-      // Removed mode: 'cors' to allow standard simple request which usually works better with GitHub Pages
       const response = await fetch(excelUrl, {
         cache: 'no-cache'
       });
@@ -293,6 +305,16 @@ const TillmanKnowledgeAssistant = () => {
   const sendMessage = async (messageText = inputText) => {
     if (!messageText.trim() || isLoading) return;
 
+    if (!aiRef.current) {
+      setApiKeyError(true);
+      const errorMessage = {
+        role: 'assistant',
+        content: `I cannot connect to the AI service because the API Key is missing. Please check your configuration.`
+      };
+      setMessages([...messages, { role: 'user', content: messageText }, errorMessage]);
+      return;
+    }
+
     const userMessage = { role: 'user', content: messageText };
     const updatedMessages = [...messages, userMessage];
     setMessages(updatedMessages);
@@ -470,7 +492,7 @@ KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
 
       // Call Google GenAI API
-      const response = await ai.models.generateContent({
+      const response = await aiRef.current.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: messageText,
         config: {
@@ -561,6 +583,14 @@ ${knowledgeBase}`;
           </button>
         </div>
       </div>
+
+      {/* API Key Error Banner */}
+      {apiKeyError && (
+        <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md">
+          ⚠️ MISSING API KEY: The application cannot connect to Gemini. <br/>
+          If you are running on GitHub Pages, you must manually set your API key in the index.html file (line 30).
+        </div>
+      )}
 
       {/* Data Load Error Banner - Visible if Excel fails to load */}
       {dataLoadError && (
@@ -669,5 +699,4 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);]]></content>
-</change>
+root.render(<TillmanKnowledgeAssistant />);
