@@ -1,6 +1,6 @@
 <change>
 <file>index.tsx</file>
-<description>Add Settings Modal for voice selection, saving preferences, downloading transcript, and printing chat.</description>
+<description>Expand knowledge base with detailed Utility Locate procedures and comprehensive Rate Cards (Standard vs Subcontractor).</description>
 <content><![CDATA[import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
@@ -426,69 +426,193 @@ TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
 ${projectDataContext}
 
-## SECTION 6: RATE CARDS (IMPORTANT: DIFFERENTIATE BETWEEN STANDARD AND SUBCONTRACTOR RATES)
+## SECTION 6: RATE CARDS (DETAILED)
 
 ### TILLMAN FIBER STANDARD RATE CARD (Construction v1.1) - INTERNAL/CONSTRUCTION USE
-This card lists rates for Aerial, Buried, and Underground OSP Construction. Key items:
 *   **Aerial**:
     *   TCA1 Place Aerial - Strand 6M to 6.6M: $1.10/FT
+    *   TCA1A Anchor/Rod Mechanical: $75.00/EA
+    *   TCA1B Anchor/Rod Hand-Dig: $75.00/EA
+    *   TCA2 Place Aerial - Stand 10M to 25M: $1.30/FT
     *   TCA3 Place Aerial - Self-support fiber: $1.36/FT
     *   TCA4 Place Aerial - Self-support flexible duct: $1.55/FT
+    *   TCA5 Total Bundle < 2500': $2.00/FT
+    *   TCA6 Total Bundle > 5000': $1.90/FT
+    *   TCA7 Total Bundle < 5000': $1.80/FT
 *   **Buried (Directional Bore)**:
     *   TCBDB2 (Standard, up to 4.0"): $10.00/FT
     *   TCBDB4 (Standard, over 4.0" to 7.0"): $14.00/FT
     *   TCBDB8 (Rock, up to 4.0"): $25.00/FT
+    *   TCBDB9 (Rock, over 4.0" to 7.0"): $29.00/FT
 *   **Buried (Hand Dig)**:
     *   TCBHD1 (6" cover): $4.50/FT
     *   TCBHD2 (7"-12" cover): $5.50/FT
+    *   TCBHD3 (12"-18" cover): $6.50/FT
+    *   TCBHD4 (19"-24" cover): $7.50/FT
+    *   TCBHD5 (25"-36" cover): $8.50/FT
     *   TCBHD6 (37"-48" cover): $11.00/FT
+    *   TCBHD7 (Add'l depth 6"): $1.25/FT
 *   **Buried (Missile/Stitch)**:
     *   TCBMB1 (up to 4.0"): $9.00/FT
     *   TCBMB2 (over 4.0" to 7.0"): $12.50/FT
-*   **Buried Support**:
+*   **Buried (Mechanical/Plow)**:
+    *   TCBP1 (6" cover): $4.25/FT
+    *   TCBP2 (7"-12"): $4.40/FT
+    *   TCBP3 (12"-18"): $4.55/FT
+    *   TCBP4 (19"-24"): $5.00/FT
+    *   TCBP5 (25"-36"): $5.35/FT
+    *   TCBP6 (37"-48"): $6.50/FT
+    *   TCBP7 (Add'l depth): $1.50/FT
+*   **BSW (Buried Service Wire)**:
+    *   TCBSW3 (Buried drop & duct pull): $1.50/FT
+    *   TCBSW4 (Duct pull method): $0.85/FT
+    *   TCBSW4B (Duct blowing method): $1.20/FT
+    *   TCBSW5 (Buried drop/microduct): $1.30/FT
+    *   TCBSW13 (Driveway bore): $15.00/FT
+    *   TCBSW17 (Trip charge single): $55.00/EA
+    *   TCBSW18 (Trip charge crew): $245.00/EA
+*   **Electronics/OLT**:
+    *   TCE1 OLT Cabinet Place/Test: $750.00/LOC
+    *   TCE2 OLT Clam Shell: $620.00/LOC
+    *   TCE3 OLT Strand: $390.00/LOC
+*   **Restoration Hourly**:
+    *   TCHR1 CDL Driver Differential: $60.00/HR
+    *   TCHR2 CDL Driver Normal: $50.00/HR
+    *   TCHR6 Electrician Differential: $120.00/HR
+    *   TCHR7 Electrician Normal: $90.00/HR
+    *   TCHR11 Flagger Differential: $35.00/HR
+    *   TCHR12 Flagger Normal: $40.00/HR
+    *   TCHR16 General Laborer Differential: $50.00/HR
+    *   TCHR17 General Laborer Normal: $40.00/HR
+    *   TCHR26 Lineman Differential: $75.00/HR
+    *   TCHR27 Lineman Normal: $70.00/HR
+    *   TCHR31 Machine Operator Differential: $70.00/HR
+    *   TCHR32 Machine Operator Normal: $60.00/HR
+    *   TCHR46 Splicer Differential: $90.00/HR
+    *   TCHR47 Splicer Normal: $80.00/HR
+    *   TCHR51 Supervisor Differential: $100.00/HR
+    *   TCHR52 Supervisor Normal: $85.00/HR
+*   **Splicing (Turnkey)**:
+    *   TCSS1 Cable Only <=96 fibers: $29.80/EA
+    *   TCSS2 Ribbon <=96 fibers: $12.75/EA
+    *   TCSS3 Cable Only >96 fibers: $25.00/EA
+    *   TCSS4 Ribbon >96 fibers: $12.00/EA
+    *   TCSS11 Terminal Closure <= 12 Fibers: $194.00/EA
+*   **Support Structure (Handholes/Pads)**:
     *   TCMB1 Drop wire terminal: $50.00/EA
     *   TCMB8 Ground rod: $50.00/EA
     *   TCMB10 Ground wire: $2.00/FT
-*   **Restoration Hourly**:
-    *   TCHR2 CDL Truck Driver Normal: $50.00/HR
-    *   TCHR17 General Laborer Normal: $40.00/HR
-    *   TCHR27 Lineman Normal: $70.00/HR
-*   **Splicing**:
-    *   TCSS1 Cable Only <=96 fibers: $29.80/EA
-    *   TCSS3 Cable Only >96 fibers: $25.00/EA
-    *   TCSS11 Terminal Closure <= 12 Fibers: $194.00/EA
+    *   TCMB30 Pad up to 10 sq ft: $1,500.00/EA
+    *   TCMB3A HH 13x24x18: $122.00/EA
+    *   TCMB3B HH 17x30x24: $243.00/EA
+    *   TCMB4 HH 30x48x36: $440.00/EA
+    *   TCMU1 FDH/OLT Vault Mtd: $375.00/EA
+    *   TCMU2 FDH/OLT Pole Mtd: $450.00/EA
 
 ### FLORIDA REGION SUBCONTRACTOR RATE CARD (Tillman Fiber 2024 - REVISED 1/31/2025) - EXTERNAL/SUB USE
-This card lists rates paid to Subcontractors. **Note the differences in pricing compared to the Standard Card.**
 *   **Aerial**:
     *   TCA1 Place Aerial - Strand 6M to 6.6M: $0.55/FT
+    *   TCA1A Anchor/Rod Mechanical: $30.00/EA
+    *   TCA1B Anchor/Rod Hand-Dig: $30.00/EA
+    *   TCA2 Place Aerial - Stand 10M to 25M: $0.70/FT
     *   TCA3 Place Aerial - Self-support fiber: $0.80/FT
     *   TCA4 Place Aerial - Self-support flexible duct: $0.90/FT
+    *   TCA5 Total Bundle < 2500': $0.70/FT
+    *   TCA6 Total Bundle > 5000': $0.65/FT
+    *   TCA7 Total Bundle < 5000': $0.60/FT
 *   **Buried (Directional Bore)**:
     *   TCBDB2 (Standard, up to 4.0"): $7.00/FT
     *   TCBDB4 (Standard, over 4.0" to 7.0"): $9.00/FT
     *   TCBDB8 (Rock, up to 4.0"): $15.00/FT
+    *   TCBDB9 (Rock, over 4.0" to 7.0"): $17.00/FT
 *   **Buried (Hand Dig)**:
     *   TCBHD1 (6" cover): $2.70/FT
     *   TCBHD2 (7"-12" cover): $3.30/FT
+    *   TCBHD3 (12"-18" cover): $3.90/FT
+    *   TCBHD4 (19"-24" cover): $4.00/FT
+    *   TCBHD5 (25"-36" cover): $4.25/FT
     *   TCBHD6 (37"-48" cover): $4.50/FT
+    *   TCBHD7 (Add'l depth 6"): $0.50/FT
 *   **Buried (Missile)**:
     *   TCBMB1 (up to 4.0"): $5.50/FT
     *   TCBMB2 (over 4.0" to 7.0"): $7.50/FT
-*   **Buried Support**:
+*   **Buried (Mechanical)**:
+    *   TCBP1 (6" cover): $1.50/FT
+    *   TCBP2 (7"-12"): $1.65/FT
+    *   TCBP3 (12"-18"): $1.75/FT
+    *   TCBP4 (19"-24"): $1.85/FT
+    *   TCBP5 (25"-36"): $1.95/FT
+    *   TCBP6 (37"-48"): $2.50/FT
+*   **BSW (Buried Service Wire)**:
+    *   TCBSW3 (Buried drop & duct pull): $0.80/FT
+    *   TCBSW4 (Duct pull method): $0.50/FT
+    *   TCBSW4B (Duct blowing method): $0.70/FT
+    *   TCBSW5 (Buried drop/microduct): $0.75/FT
+    *   TCBSW13 (Driveway bore): $8.00/FT
+    *   TCBSW17 (Trip charge single): $33.00/EA
+    *   TCBSW18 (Trip charge crew): $147.00/EA
+*   **Electronics**:
+    *   TCE1 OLT Cabinet: $450.00/LOC
+    *   TCE2 OLT Clam Shell: $372.00/LOC
+    *   TCE3 OLT Strand: $234.00/LOC
+*   **Restoration Hourly**:
+    *   TCHR1 CDL Driver Differential: $36.00/HR
+    *   TCHR2 CDL Driver Normal: $30.00/HR
+    *   TCHR6 Electrician Differential: $72.00/HR
+    *   TCHR7 Electrician Normal: $54.00/HR
+    *   TCHR11 Flagger Differential: $21.00/HR
+    *   TCHR12 Flagger Normal: $24.00/HR
+    *   TCHR16 General Laborer Differential: $30.00/HR
+    *   TCHR17 General Laborer Normal: $24.00/HR
+    *   TCHR26 Lineman Differential: $45.00/HR
+    *   TCHR27 Lineman Normal: $42.00/HR
+    *   TCHR31 Machine Operator Differential: $42.00/HR
+    *   TCHR32 Machine Operator Normal: $36.00/HR
+    *   TCHR46 Splicer Differential: $54.00/HR
+    *   TCHR47 Splicer Normal: $48.00/HR
+    *   TCHR51 Supervisor Differential: $60.00/HR
+    *   TCHR52 Supervisor Normal: $51.00/HR
+*   **Splicing**:
+    *   TCSS1 Cable Only <=96 fibers: $17.00/EA
+    *   TCSS2 Ribbon <=96 fibers: $6.50/EA
+    *   TCSS3 Cable Only >96 fibers: $15.00/EA
+    *   TCSS4 Ribbon >96 fibers: $6.00/EA
+    *   TCSS11 Terminal Closure <= 12 Fibers: $115.00/EA
+*   **Support Structure (Handholes/Pads)**:
     *   TCMB1 Drop wire terminal: $28.00/EA
     *   TCMB8 Ground rod: $25.00/EA
     *   TCMB10 Ground wire: $1.00/FT
-*   **Restoration Hourly**:
-    *   TCHR2 CDL Truck Driver Normal: $30.00/HR
-    *   TCHR17 General Laborer Normal: $24.00/HR
-    *   TCHR27 Lineman Normal: $42.00/HR
-*   **Splicing**:
-    *   TCSS1 Cable Only <=96 fibers: $17.00/EA
-    *   TCSS3 Cable Only >96 fibers: $15.00/EA
-    *   TCSS11 Terminal Closure <= 12 Fibers: $115.00/EA
+    *   TCMB30 Pad up to 10 sq ft: $850.00/EA
+    *   TCMB3A HH 13x24x18: $70.00/EA
+    *   TCMB3B HH 17x30x24: $140.00/EA
+    *   TCMB4 HH 30x48x36: $250.00/EA
+    *   TCMU1 FDH/OLT Vault Mtd: $215.00/EA
+    *   TCMU2 FDH/OLT Pole Mtd: $250.00/EA
+    *   TMDU-014 Core Bore >2.5 to 4.0": $75.00/EA
+    *   TMDULU-001-A MDU Turnkey 1-15 Units: $190.00/LU
 
 **KEY DIFFERENCE INSTRUCTION:** When answering questions about rates, ALWAYS specify which rate card you are referencing (Standard/Internal vs. Subcontractor/External). If the user asks generally, provide the STANDARD rate first, then mention the SUBCONTRACTOR rate as a comparison.
+
+## SECTION 7: UTILITY LOCATE TICKET REQUESTS (NEW)
+*   **Purpose**: Standardized procedure to identify underground utilities before digging.
+*   **Roles**:
+    *   **Vendor**: Ensures accurate tickets, tracks status.
+    *   **Sub-Contractor**: Submits tickets, compliance with USIC agreement.
+    *   **Tillman PM**: Facilitates priority jobs.
+*   **Required Info**: Email, Project Affiliation ("Tillman Fiber"), Job Name (e.g., FB-HDH02A), Footage, Work Type, Excavation Method, Depth.
+*   **Communication**:
+    *   Subs **cannot** contact locators for prioritization.
+    *   Only **Tillman Fiber** requests prioritization from USIC.
+    *   Do not use "Do not delay" or "High priority" on tickets.
+*   **Submission Strategy**:
+    *   **Daisy Chain**: 1.1 -> 1.2 -> 1.3 (sequential).
+    *   **Feeder**: Start from Active Cabinet.
+    *   **Batch Requests**: Submit multiple tickets for contiguous areas.
+*   **Procedure**:
+    *   White line area first.
+    *   Contact One-Call 1 week prior.
+    *   Verify ticket details and maintain log.
+    *   **Rollback**: If locate is wrong/incomplete, HALT excavation, request emergency re-locate, notify PM.
 
 ## SECTION 1: EXECUTION OF BOM, SOW, NTP, PO, INVOICING, CO’s & COP’s
 
