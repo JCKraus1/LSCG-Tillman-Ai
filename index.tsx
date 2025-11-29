@@ -1,6 +1,6 @@
 <change>
 <file>index.tsx</file>
-<description>Expand knowledge base with detailed Utility Locate procedures and comprehensive Rate Cards (Standard vs Subcontractor).</description>
+<description>Clean file content, implement Settings (Voice/Save/Print), Dashboard iframe, and expanded Knowledge Base with Rate Cards and Utility Locates.</description>
 <content><![CDATA[import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
@@ -31,7 +31,7 @@ const TillmanKnowledgeAssistant = () => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, and more. I also have access to live project data. You can type your question or click the microphone to speak. How can I help you today?"
+      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data. You can type your question or click the microphone to speak. How can I help you today?"
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -594,25 +594,39 @@ ${projectDataContext}
 **KEY DIFFERENCE INSTRUCTION:** When answering questions about rates, ALWAYS specify which rate card you are referencing (Standard/Internal vs. Subcontractor/External). If the user asks generally, provide the STANDARD rate first, then mention the SUBCONTRACTOR rate as a comparison.
 
 ## SECTION 7: UTILITY LOCATE TICKET REQUESTS (NEW)
-*   **Purpose**: Standardized procedure to identify underground utilities before digging.
-*   **Roles**:
-    *   **Vendor**: Ensures accurate tickets, tracks status.
-    *   **Sub-Contractor**: Submits tickets, compliance with USIC agreement.
-    *   **Tillman PM**: Facilitates priority jobs.
-*   **Required Info**: Email, Project Affiliation ("Tillman Fiber"), Job Name (e.g., FB-HDH02A), Footage, Work Type, Excavation Method, Depth.
-*   **Communication**:
-    *   Subs **cannot** contact locators for prioritization.
-    *   Only **Tillman Fiber** requests prioritization from USIC.
-    *   Do not use "Do not delay" or "High priority" on tickets.
-*   **Submission Strategy**:
-    *   **Daisy Chain**: 1.1 -> 1.2 -> 1.3 (sequential).
+*   **Purpose**: Standardized procedure for submitting utility locate requests in Tillman FTTH builds. Goal: Ensure all underground utilities are marked to prevent damage and ensure safety.
+*   **Roles & Responsibilities**:
+    *   **Vendor's Management**: Ensures complete/accurate tickets, tracks status, ensures safety compliance.
+    *   **Sub-Contractor**: Submits tickets, compliance with Tillman-USIC agreement.
+    *   **Construction Crew**: Adheres to markings, follows safety guidelines, reports discrepancies.
+    *   **Tillman PM**: Facilitates priority jobs and obstacles.
+*   **Required Information**:
+    *   Email Contacts, Project Affiliation ("Tillman Fiber"), Job Name (e.g., FB-HDH02A), Footage.
+    *   Detailed Site Info (street names, intersections), Work Type (boring, trenching), Excavation Method, Depth.
+    *   Proposed Start Date/Time, Point of Contact (name/phone).
+*   **Communication Protocol**:
+    *   **Subcontractors**: CANNOT contact locators for prioritization.
+    *   **Vendors**: Can communicate with USIC only to answer questions/resolve issues.
+    *   **Tillman Fiber**: ONLY Tillman has authority to request job prioritization.
+    *   Do NOT use terms like "Do not delay" or "High priority" on tickets.
+*   **Submission Guidelines**:
+    *   **Daisy Chain**: Build sequentially (1.1 -> 1.2 -> 1.3).
     *   **Feeder**: Start from Active Cabinet.
+    *   **Logical Prioritization**: Follow network build progression.
     *   **Batch Requests**: Submit multiple tickets for contiguous areas.
 *   **Procedure**:
-    *   White line area first.
-    *   Contact One-Call 1 week prior.
-    *   Verify ticket details and maintain log.
-    *   **Rollback**: If locate is wrong/incomplete, HALT excavation, request emergency re-locate, notify PM.
+    *   **Step 1**: White line area. Contact One-Call (811) 1 week prior. Obtain ticket #.
+    *   **Step 2**: Verify ticket details. Maintain log (status/expiration). Ensure ticket remains valid.
+    *   **Step 3**: Distribute info to PM/Construction Manager. Ensure markings are in place. Pothole if discrepancies found.
+    *   **Step 4 (Compliance)**: Markings visible until completion. Close ticket with One-Call. Retain records.
+*   **Safety**:
+    *   PPE required (vest, gloves, boots).
+    *   Be aware of hazards (gas, HV lines).
+    *   **MANDATORY**: Potholing/physically identifying all marked utilities prior to drilling.
+*   **Rollback Plan**:
+    *   If locate is incorrect/incomplete: **HALT** excavation immediately.
+    *   Contact One-Call for emergency re-locate.
+    *   Notify Project Manager.
 
 ## SECTION 1: EXECUTION OF BOM, SOW, NTP, PO, INVOICING, CO’s & COP’s
 
