@@ -28,7 +28,7 @@ const TillmanKnowledgeAssistant = () => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data. You can type your question or click the microphone to speak. How can I help you today?"
+      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data including costs, timelines, and status. You can type your question or click the microphone to speak. How can I help you today?"
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -233,32 +233,40 @@ const TillmanKnowledgeAssistant = () => {
           });
           
           const validRows = sheetData.map(row => {
+            // Normalize NTP Number column and Extract Market
+            // Look for any key that includes "NTP Number" (e.g., "Market 1 NTP Number", "NTP Number")
             const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
             const ntpValue = row[ntpKey];
             
+            // Extract market from header (e.g., "Market 1 NTP Number" -> "Market 1")
             let market = ntpKey.replace("NTP Number", "").trim();
+            // If extracting failed (empty string), try to use 'AREA' or default
             if (!market) {
+               // Cleanup to ensure we don't have trailing characters
                market = "General";
             }
 
             return {
               ...row,
-              'NTP Number': ntpValue,
-              'Market': market
+              'NTP Number': ntpValue, // Standardize to single key
+              'Market': market // Add explicit Market field
             };
           }).filter(row => {
             const ntpNumber = row['NTP Number'];
             
+            // Strictly require an NTP Number
             if (!ntpNumber || String(ntpNumber).trim() === '') {
               return false;
             }
 
             if (typeof ntpNumber === 'string') {
               const lowerNtp = ntpNumber.toLowerCase().trim();
+              // Check if NTP Number contains any of the excluded phrases
               const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
               if (isExcluded) return false;
             }
 
+            // Check if row has other meaningful data
             const hasData = Object.values(row).some(value => value && String(value).trim() !== '');
             if (!hasData) return false;
 
@@ -289,7 +297,7 @@ const TillmanKnowledgeAssistant = () => {
       
     } catch (error: any) {
       console.error('❌ Error loading project data:', error);
-      setProjectData(null);
+      setProjectData(null); // Ensure data is null on error so the bot knows it's offline
       setLastDataUpdate(null);
       setIsLoadingData(false);
       setDataLoadError(`Failed to load Excel data: ${error.message}. Ensure "tillman-project.xlsx" exists in the GitHub repo.`);
@@ -412,7 +420,16 @@ const TillmanKnowledgeAssistant = () => {
         
         projectData.forEach(project => {
           const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline: ${project['SOW TSD Date']} | Completion Date: ${completionDate}`;
+          const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
+          const doorTagDate = project['Door Tag Date'] || 'N/A';
+          const locateDate = project['Locate Date'] || 'N/A';
+          const sowTsdDate = project['SOW TSD Date'] || 'N/A';
+          const vendorAssignment = project['Vendor Assignment'] || 'N/A';
+          const hhp = project['HHP'] || 'N/A';
+          const dateAssigned = project['Date Assigned'] || 'N/A';
+          const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
+
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
@@ -732,6 +749,9 @@ ${projectDataContext}
 *   **ABF**: Air Blown Fiber.
 *   **COP**: Closeout Package.
 *   **GIG**: Good to Go / Growth Inhibiting Gaps (deficiencies).
+*   **HHP**: Households Passed (also referred to as Serviceable Addresses or SAs).
+*   **SOW Cost**: Statement of Work Estimated Cost.
+*   **TSD Date**: Target Start Date (Deadline).
 `;
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
@@ -747,7 +767,11 @@ CRITICAL INSTRUCTIONS:
 5.  **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
 6.  **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
 7.  **Rate Cards**: Distinguish between the "Standard Rate Card" (Internal) and "Subcontractor Rate Card" (External). If a user asks for a rate, check both and clarify the difference.
-8.  **Tone**: Professional but friendly.
+8.  **New Data Fields**: 
+    *   **HHP**: Refers to "Serviceable Addresses" or "Households Passed".
+    *   **SOW Estimated Cost**: The estimated cost for the project.
+    *   **On Track or In Jeopardy**: The health status of the project.
+9.  **Tone**: Professional but friendly.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
