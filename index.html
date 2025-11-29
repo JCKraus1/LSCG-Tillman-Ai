@@ -2,12 +2,12 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LSCG Tillman Knowledge Assistant</title>
-  <meta name="description" content="Voice-enabled AI assistant for Tillman Fiber and Lightspeed Construction procedures and project data">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Nexus - LSCG Tillman Assistant</title>
+  <meta name="description" content="Nexus: Voice-enabled AI assistant for Tillman Fiber and Lightspeed Construction procedures and project data">
   
   <!-- Favicon -->
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📘</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
   
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
@@ -17,13 +17,23 @@
 
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background-color: #f3f4f6; }
+    
+    /* Animations */
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+    
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .animate-spin { animation: spin 1s linear infinite; }
-    .animate-fade-in { animation: fadeIn 0.5s ease-out; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-message { animation: fadeInUp 0.3s ease-out forwards; }
+    
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .animate-fade-in { animation: fadeIn 0.3s ease-out; }
 
     /* Print Styles */
     @media print {
@@ -33,6 +43,11 @@
       .message-bubble { border: 1px solid #ddd; box-shadow: none !important; color: black !important; background: white !important; page-break-inside: avoid; }
       .user-message { font-weight: bold; }
       ::-webkit-scrollbar { display: none; }
+    }
+
+    /* Mobile Tweaks */
+    .mobile-header {
+      padding-bottom: env(safe-area-inset-bottom);
     }
   </style>
 
@@ -44,7 +59,7 @@
           // ⚠️ SECURITY WARNING: 
           // For GitHub Pages (static hosting), you must paste your API Key below.
           // To secure it, restrict this key in Google Cloud Console to your specific domain (e.g. jckraus1.github.io).
-          API_KEY: 'AIzaSyDgnvDiZl4f7UvdIrH7h_vT9wJ8fLwLQWM' // <--- PASTE YOUR GOOGLE GENAI API KEY HERE
+          API_KEY: '' // <--- PASTE YOUR GOOGLE GENAI API KEY HERE
         }
       };
     }
@@ -56,7 +71,9 @@
     "react": "https://esm.sh/react@18.2.0",
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
     "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai"
+    "@google/genai": "https://esm.sh/@google/genai",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/"
   }
 }
 </script>

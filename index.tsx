@@ -28,7 +28,7 @@ const TillmanKnowledgeAssistant = () => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data including costs and timelines. You can type your question or click the microphone to speak. How can I help you today?"
+      content: "Hello! I'm Nexus your LSCG Tillman AI Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data. You can type your question or click the microphone to speak. How can I help you today?"
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -58,11 +58,9 @@ const TillmanKnowledgeAssistant = () => {
 
   useEffect(() => {
     try {
-      // Use the environment variable provided by the platform
       const apiKey = process.env.API_KEY;
       if (apiKey && apiKey.trim() !== '') {
         aiRef.current = new GoogleGenAI({ apiKey: apiKey });
-        setApiKeyError(false);
       } else {
         console.warn("API Key is missing or empty.");
         setApiKeyError(true);
@@ -85,13 +83,15 @@ const TillmanKnowledgeAssistant = () => {
       if (savedVoice && voices.some(v => v.name === savedVoice)) {
         setSelectedVoiceName(savedVoice);
       } else {
-        // Default Logic: Moira -> Victoria -> Samantha -> First Female -> Default
+        // Default Logic: Google UK English Female -> Moira -> Victoria -> Samantha -> First Female -> Default
+        const ukFemale = voices.find(v => v.name.includes('Google UK English Female'));
         const moira = voices.find(v => v.name.includes('Moira'));
         const victoria = voices.find(v => v.name.includes('Victoria'));
         const samantha = voices.find(v => v.name.includes('Samantha'));
-        const female = voices.find(v => v.name.includes('Female') || v.name.includes('Google US English'));
+        const female = voices.find(v => v.name.includes('Female'));
         
-        if (moira) setSelectedVoiceName(moira.name);
+        if (ukFemale) setSelectedVoiceName(ukFemale.name);
+        else if (moira) setSelectedVoiceName(moira.name);
         else if (victoria) setSelectedVoiceName(victoria.name);
         else if (samantha) setSelectedVoiceName(samantha.name);
         else if (female) setSelectedVoiceName(female.name);
@@ -152,7 +152,7 @@ const TillmanKnowledgeAssistant = () => {
     
     // Test the voice
     synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance("Voice updated.");
+    const utterance = new SpeechSynthesisUtterance("Voice updated. I am Nexus.");
     const voiceObj = availableVoices.find(v => v.name === newVoice);
     if (voiceObj) utterance.voice = voiceObj;
     synthRef.current.speak(utterance);
@@ -165,7 +165,7 @@ const TillmanKnowledgeAssistant = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `tillman-chat-transcript-${new Date().toISOString().split('T')[0]}.txt`;
+    a.download = `nexus-chat-transcript-${new Date().toISOString().split('T')[0]}.txt`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -798,6 +798,7 @@ CRITICAL INSTRUCTIONS:
     *   **SOW Estimated Cost**: The estimated cost for the project.
     *   **On Track or In Jeopardy**: The health status of the project.
 9.  **Tone**: Professional but friendly.
+10. **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
@@ -850,52 +851,35 @@ ${knowledgeBase}`;
   ];
 
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-[#383e4b] to-[#000000] to-50% sm:to-100% bg-cover">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#383e4b] to-[#000000] text-white p-6 shadow-lg header-buttons">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <div className="bg-gradient-to-r from-[#383e4b] to-[#000000] text-white p-4 shadow-lg header-buttons flex-none sticky top-0 z-10">
+        <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
-            <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-            </svg>
+             {/* Logo Placeholder or SVG */}
+             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-lg overflow-hidden shadow-md">
+                <svg viewBox="0 0 100 100" className="w-full h-full p-1">
+                   <path d="M50 10 L90 90 L10 90 Z" fill="#383e4b" stroke="none" />
+                   <circle cx="50" cy="60" r="15" fill="white" />
+                </svg>
+             </div>
             <div>
-              <h1 className="text-2xl font-bold">Tillman Knowledge Assistant</h1>
-              <p className="text-blue-100 text-sm">Voice-enabled AI for construction procedures & standards</p>
-              {isLoadingData && (
-                <p className="text-blue-200 text-xs mt-1 flex items-center gap-2">
-                  <svg className="w-3 h-3 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Loading live project data...
-                </p>
-              )}
-              {!isLoadingData && projectData && (
-                <div className="flex items-center gap-2 mt-1">
-                  <p className="text-blue-200 text-xs">
-                    ✅ Live data: {projectData.length} projects | Updated: {lastDataUpdate}
-                  </p>
-                  <button onClick={loadSheetJSAndFetchData} className="text-blue-200 hover:text-white transition-colors" title="Refresh project data">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                  </button>
-                </div>
-              )}
+              <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
+              <p className="text-gray-300 text-xs hidden sm:block">AI-powered Construction & Project Intelligence</p>
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowDashboard(!showDashboard)} className={`p-3 rounded-full transition-all ${showDashboard ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}>
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            <button onClick={() => setShowDashboard(!showDashboard)} className={`p-2 rounded-full transition-all ${showDashboard ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}>
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             </button>
-            <button onClick={() => setShowSettings(!showSettings)} className={`p-3 rounded-full transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title="Settings">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title="Settings">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
             </button>
-            <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-3 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
+            <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-2 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
               {autoSpeak ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
               ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
               )}
             </button>
           </div>
@@ -978,18 +962,18 @@ ${knowledgeBase}`;
 
       {/* Dashboard Toggle View */}
       {showDashboard && (
-        <div className="max-w-4xl mx-auto w-full px-4 pt-6 no-print">
+        <div className="max-w-4xl mx-auto w-full px-4 pt-6 no-print flex-none">
           <ExternalDashboard />
         </div>
       )}
 
       {/* Quick Questions */}
       {messages.length === 1 && !showDashboard && (
-        <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print">
+        <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print flex-none">
           <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {quickQuestions.map((question, idx) => (
-              <button key={idx} onClick={() => sendMessage(question)} className="text-left p-3 bg-white rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition-all border border-gray-200 text-sm">
+              <button key={idx} onClick={() => sendMessage(question)} className="text-left p-3 bg-white rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition-all border border-gray-200 text-sm animate-fade-in" style={{animationDelay: `${idx * 100}ms`}}>
                 <svg className="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
                 {question}
               </button>
@@ -999,14 +983,14 @@ ${knowledgeBase}`;
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 chat-container">
-        <div className="max-w-4xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto px-4 py-6 chat-container bg-[#f3f4f6] w-full">
+        <div className="max-w-4xl mx-auto space-y-4 pb-20">
           {messages.map((message, idx) => (
-            <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper`}>
-              <div className={`max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message' : 'bg-white text-gray-800 border border-gray-200 assistant-message'}`}>
+            <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper animate-message`}>
+              <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 assistant-message rounded-bl-none'}`}>
                 <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
                 {message.role === 'assistant' && idx === messages.length - 1 && !isLoading && (
-                  <button onClick={() => speakText(message.content)} className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 no-print">
+                  <button onClick={() => speakText(message.content)} className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 no-print font-medium">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
                     Read aloud
                   </button>
@@ -1015,9 +999,11 @@ ${knowledgeBase}`;
             </div>
           ))}
           {isLoading && (
-            <div className="flex justify-start no-print">
-              <div className="bg-white rounded-2xl px-5 py-3 shadow-sm border border-gray-200">
-                <svg className="w-5 h-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <div className="flex justify-start no-print animate-message">
+              <div className="bg-white rounded-2xl rounded-bl-none px-5 py-4 shadow-sm border border-gray-200 flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
               </div>
             </div>
           )}
@@ -1026,10 +1012,10 @@ ${knowledgeBase}`;
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print">
+      <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print flex-none sticky bottom-0 z-10">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-end">
-            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`} title={isListening ? 'Stop listening' : 'Click to speak'}>
+            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`} title={isListening ? 'Stop listening' : 'Click to speak'}>
               {isListening ? (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
               ) : (
@@ -1037,15 +1023,15 @@ ${knowledgeBase}`;
               )}
             </button>
             <div className="flex-1 relative">
-              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? "Listening..." : "Type your question or click the microphone to speak..."} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed" rows={2} />
+              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? "Listening..." : "Type your question or click the microphone to speak..."} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
             </div>
-            <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed" title="Send message">
+            <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none" title="Send message">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
             </button>
           </div>
           {isListening && (
-            <p className="text-sm text-red-600 mt-2 flex items-center gap-2">
-              <span className="w-2 h-2 bg-red-600 rounded-full animate-pulse"></span>
+            <p className="text-sm text-red-600 mt-2 flex items-center gap-2 animate-pulse justify-center sm:justify-start">
+              <span className="w-2 h-2 bg-red-600 rounded-full"></span>
               Listening... Speak your question now
             </p>
           )}
@@ -1064,11 +1050,11 @@ ${knowledgeBase}`;
         </div>
       </div>
 
-      {/* Usage Tips */}
-      <div className="bg-black border-t border-gray-800 px-4 py-2 no-print">
-        <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap">
-          <span>💡 Ask about procedures, timelines, requirements, or standards</span>
-          <span>•</span>
+      {/* Footer */}
+      <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
+        <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap text-center">
+          <span>💡 Ask about procedures, timelines, rates, or live project data</span>
+          <span className="hidden sm:inline">•</span>
           <span>🎤 Voice works in Chrome & Edge</span>
         </div>
       </div>
