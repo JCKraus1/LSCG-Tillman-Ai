@@ -77,7 +77,7 @@ const TillmanKnowledgeAssistant = () => {
       const voices = synthRef.current.getVoices();
       setAvailableVoices(voices);
 
-      // Load preference from localStorage
+      // Load preference from localStorage or use default logic
       const savedVoice = localStorage.getItem('tillman_assistant_voice');
       
       if (savedVoice && voices.some(v => v.name === savedVoice)) {
@@ -111,25 +111,21 @@ const TillmanKnowledgeAssistant = () => {
       synthRef.current.onvoiceschanged = loadVoices;
     }
 
-    // Setup Speech Recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = true; // IMPORTANT: Set to true to see text while speaking
+      recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
         let finalTranscript = '';
-        // Iterate through results to handle interim vs final
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
-            // If we have a final result, we can optionally auto-send or just set state
             setInputText(finalTranscript);
             setIsListening(false);
           } else {
-            // Show interim results in input box
             setInputText(event.results[i][0].transcript);
           }
         }
@@ -689,6 +685,18 @@ ${projectDataContext}
     7.  Input format: \`ProjectName-Sheet#\` (e.g., \`D-HDH60-Sheet5\`).
 *   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#_DateTime.jpg\`.
 
+## SECTION 10: IMPORTANT LINKS
+1.  **Tillman Project SharePoint**: https://lightspeedconstructiongroup.sharepoint.com/sites/ClearwaterSupervisors/SitePages/ProjectHome.aspx
+2.  **Project Summary Data**: https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1
+3.  **Locate Ticket Tracker**: https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/EdvfutoSOu1GjODYhk1aFEkBbm3WQj1UA2VCNUdg71tj3Q?e=0eslHQ&web=1
+4.  **Restoration Tracker**: https://lightspeedconstructiongroup-my.sharepoint.com/:x:/g/personal/betsy_montero_lscg_com/EbghxuQJnjRNucEyZM0IyyQB3FgqYjmPNcwh3KO4UXYYSw?e=ZJzShy&nav=MTVfezAwMDAwMDAwLTAwMDEtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMH0
+5.  **Project Dashboard**: https://jckraus1.github.io/Tillman-Dashboard/Tillman%20Dashboard.html
+6.  **Share Drive (Maps/Docs)**: https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project
+7.  **Sunshine 811 (Locate Tickets)**: https://exactix.sunshine811.com/login
+8.  **Sunshine 811 Training**: https://sunshine811.com/full-ite-access
+9.  **Penguin Data (Billing)**: https://fullcircle.penguindata.com/login
+10. **OneStepGPS (Vehicle Tracking)**: https://track.onestepgps.com/v3/auth/login?r=https://track.onestepgps.com/v3/ux/map
+
 ## SECTION 1: EXECUTION OF BOM, SOW, NTP, PO, INVOICING, CO’s & COP’s
 
 ### BILL OF MATERIALS (BOM) & SCOPE OF WORK (SOW)
@@ -876,7 +884,7 @@ ${knowledgeBase}`;
           <div className="flex items-center gap-3">
              {/* Logo */}
              <div className="h-10 w-auto flex items-center justify-center">
-                <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
+                <img src="./LSCG_Logo_White_transparentbackground (1).png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
              </div>
             <div>
               <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
@@ -1079,3 +1087,4 @@ ${knowledgeBase}`;
 
 const root = createRoot(document.getElementById("root")!);
 root.render(<TillmanKnowledgeAssistant />);
+```
