@@ -115,17 +115,20 @@ const TillmanKnowledgeAssistant = () => {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = true;
+      recognitionRef.current.interimResults = true; // IMPORTANT: Set to true to see text while speaking
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
         let finalTranscript = '';
+        // Iterate through results to handle interim vs final
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
+            // If we have a final result, we can optionally auto-send or just set state
             setInputText(finalTranscript);
             setIsListening(false);
           } else {
+            // Show interim results in input box
             setInputText(event.results[i][0].transcript);
           }
         }
@@ -1087,4 +1090,3 @@ ${knowledgeBase}`;
 
 const root = createRoot(document.getElementById("root")!);
 root.render(<TillmanKnowledgeAssistant />);
-```
