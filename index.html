@@ -1,7 +1,4 @@
-<change>
-<file>index.html</file>
-<description>Add recharts to import map for data visualization.</description>
-<content><![CDATA[<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -25,6 +22,8 @@
     .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
     .animate-spin { animation: spin 1s linear infinite; }
+    .animate-fade-in { animation: fadeIn 0.5s ease-out; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
   </style>
 
   <!-- Polyfill for process.env to prevent crashes on GitHub Pages/Static Hosting -->
@@ -59,5 +58,4 @@
   <!-- Load index.tsx using Babel -->
   <script type="text/babel" data-type="module" src="./index.tsx" data-presets="react,typescript"></script>
 </body>
-</html>]]></content>
-</change>
+</html>

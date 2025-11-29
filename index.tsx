@@ -1,7 +1,4 @@
-<change>
-<file>index.tsx</file>
-<description>Add Market Progress Dashboard with Bar Chart, normalize market data extraction, and maintain existing voice features.</description>
-<content><![CDATA[import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect, useMemo } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
@@ -371,6 +368,7 @@ const TillmanKnowledgeAssistant = () => {
     const femaleVoice = voices.find(voice => 
       voice.name.includes('Female') || 
       voice.name.includes('Karen') || 
+      voice.name.includes('Moira') || 
       voice.name.includes('Fiona') ||
       (voice.name.includes('Google') && voice.name.includes('US') && voice.lang === 'en-US')
     );
@@ -806,5 +804,4 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);]]></content>
-</change>
+root.render(<TillmanKnowledgeAssistant />);
