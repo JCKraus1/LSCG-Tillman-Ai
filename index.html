@@ -41,8 +41,10 @@
     if (typeof process === 'undefined') {
       window.process = {
         env: {
-          // API_KEY will be injected by the build system or environment
-          API_KEY: '' 
+          // ⚠️ SECURITY WARNING: 
+          // For GitHub Pages (static hosting), you must paste your API Key below.
+          // To secure it, restrict this key in Google Cloud Console to your specific domain (e.g. jckraus1.github.io).
+          API_KEY: '' // <--- PASTE YOUR GOOGLE GENAI API KEY HERE
         }
       };
     }
