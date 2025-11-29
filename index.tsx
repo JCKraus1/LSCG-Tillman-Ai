@@ -1,7 +1,4 @@
-<change>
-<file>index.tsx</file>
-<description>Clean file content, implement Settings (Voice/Save/Print), Dashboard iframe, and expanded Knowledge Base with Rate Cards and Utility Locates.</description>
-<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 

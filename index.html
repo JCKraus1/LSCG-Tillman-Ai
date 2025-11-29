@@ -24,6 +24,16 @@
     .animate-spin { animation: spin 1s linear infinite; }
     .animate-fade-in { animation: fadeIn 0.5s ease-out; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Print Styles */
+    @media print {
+      body { background: white; color: black; }
+      .no-print, .input-area, .header-buttons, button { display: none !important; }
+      .chat-container { overflow: visible !important; height: auto !important; }
+      .message-bubble { border: 1px solid #ddd; box-shadow: none !important; color: black !important; background: white !important; page-break-inside: avoid; }
+      .user-message { font-weight: bold; }
+      ::-webkit-scrollbar { display: none; }
+    }
   </style>
 
   <!-- Polyfill for process.env to prevent crashes on GitHub Pages/Static Hosting -->
@@ -45,9 +55,7 @@
     "react": "https://esm.sh/react@18.2.0",
     "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
     "react-dom": "https://esm.sh/react-dom@18.2.0",
-    "@google/genai": "https://esm.sh/@google/genai",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/"
+    "@google/genai": "https://esm.sh/@google/genai"
   }
 }
 </script>
