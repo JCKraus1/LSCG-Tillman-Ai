@@ -1027,5 +1027,4 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);]]></content>
-</change>
+root.render(<TillmanKnowledgeAssistant />);
