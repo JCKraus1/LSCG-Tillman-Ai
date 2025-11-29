@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect, useMemo } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from "recharts";
 
 // Define window interfaces for external libraries and APIs
 declare global {
@@ -12,72 +11,15 @@ declare global {
   }
 }
 
-// Chart Component
-const MarketDashboard = ({ data }: { data: any[] }) => {
-  const chartData = useMemo(() => {
-    if (!data) return [];
-    
-    const groups: Record<string, { total: number; count: number }> = {};
-    
-    data.forEach(item => {
-      // Use the Market field we normalized, or fallback to Area
-      let market = item.Market || item.AREA || "General";
-      if (typeof market === 'string') {
-        market = market.replace(/NTP Number/i, "").trim(); // Clean up if leakage occurs
-        if (market === "" || market === "Market") market = "General"; // Fallback for empty extraction
-      }
-
-      // Clean percentage string (e.g., "65%" -> 65)
-      let pct = 0;
-      const rawPct = item['UG Percentage Complete'];
-      if (typeof rawPct === 'number') {
-        pct = rawPct <= 1 ? rawPct * 100 : rawPct; // Handle decimal vs whole number
-      } else if (typeof rawPct === 'string') {
-        pct = parseFloat(rawPct.replace('%', '').trim()) || 0;
-      }
-
-      if (!groups[market]) groups[market] = { total: 0, count: 0 };
-      groups[market].total += pct;
-      groups[market].count += 1;
-    });
-
-    return Object.keys(groups).map(k => ({
-      name: k,
-      completion: Math.round(groups[k].total / groups[k].count),
-      count: groups[k].count
-    })).sort((a, b) => b.completion - a.completion);
-  }, [data]);
-
-  if (chartData.length === 0) return null;
-
+// External Dashboard Component using Iframe
+const ExternalDashboard = () => {
   return (
-    <div className="bg-white p-4 rounded-xl shadow-md border border-blue-100 mb-4 animate-fade-in">
-      <h3 className="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
-        <svg className="w-5 h-5 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-        Market Completion Status
-      </h3>
-      <div className="h-64 w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={chartData} layout="vertical" margin={{ top: 5, right: 30, left: 40, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={true} stroke="#e5e7eb" />
-            <XAxis type="number" domain={[0, 100]} unit="%" tick={{fontSize: 12}} />
-            <YAxis dataKey="name" type="category" width={100} tick={{fontSize: 12, fontWeight: 500}} />
-            <Tooltip 
-              cursor={{fill: '#eff6ff'}}
-              contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'}}
-              formatter={(value: number) => [`${value}%`, 'Completion']}
-            />
-            <Bar dataKey="completion" radius={[0, 4, 4, 0]} barSize={24}>
-              {chartData.map((entry, index) => (
-                <Cell key={`cell-${index}`} fill={entry.completion >= 80 ? '#10b981' : entry.completion >= 50 ? '#3b82f6' : '#f59e0b'} />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <p className="text-xs text-gray-500 text-center mt-2">Average completion percentage based on {data?.length} active projects</p>
+    <div className="bg-white p-1 rounded-xl shadow-md border border-blue-100 mb-4 h-[600px] w-full animate-fade-in overflow-hidden">
+      <iframe 
+        src="https://jckraus1.github.io/Tillman-Dashboard/Tillman%20Dashboard.html" 
+        className="w-full h-full border-0"
+        title="Tillman Dashboard"
+      />
     </div>
   );
 };
@@ -86,7 +28,7 @@ const TillmanKnowledgeAssistant = () => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, closeout requirements, inspector guidelines, and more. I also have access to live project data - ask me about specific work orders, supervisor assignments, or project status. You can type your question or click the microphone to speak. How can I help you today?"
+      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, and more. I also have access to live project data. You can type your question or click the microphone to speak. How can I help you today?"
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -238,40 +180,32 @@ const TillmanKnowledgeAssistant = () => {
           });
           
           const validRows = sheetData.map(row => {
-            // Normalize NTP Number column and Extract Market
-            // Look for any key that includes "NTP Number" (e.g., "Market 1 NTP Number", "NTP Number")
             const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
             const ntpValue = row[ntpKey];
             
-            // Extract market from header (e.g., "Market 1 NTP Number" -> "Market 1")
             let market = ntpKey.replace("NTP Number", "").trim();
-            // If extracting failed (empty string), try to use 'AREA' or default
             if (!market) {
-               // Cleanup to ensure we don't have trailing characters
                market = "General";
             }
 
             return {
               ...row,
-              'NTP Number': ntpValue, // Standardize to single key
-              'Market': market // Add explicit Market field
+              'NTP Number': ntpValue,
+              'Market': market
             };
           }).filter(row => {
             const ntpNumber = row['NTP Number'];
             
-            // Strictly require an NTP Number
             if (!ntpNumber || String(ntpNumber).trim() === '') {
               return false;
             }
 
             if (typeof ntpNumber === 'string') {
               const lowerNtp = ntpNumber.toLowerCase().trim();
-              // Check if NTP Number contains any of the excluded phrases
               const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
               if (isExcluded) return false;
             }
 
-            // Check if row has other meaningful data
             const hasData = Object.values(row).some(value => value && String(value).trim() !== '');
             if (!hasData) return false;
 
@@ -302,7 +236,7 @@ const TillmanKnowledgeAssistant = () => {
       
     } catch (error: any) {
       console.error('❌ Error loading project data:', error);
-      setProjectData(null); // Ensure data is null on error so the bot knows it's offline
+      setProjectData(null);
       setLastDataUpdate(null);
       setIsLoadingData(false);
       setDataLoadError(`Failed to load Excel data: ${error.message}. Ensure "tillman-project.xlsx" exists in the GitHub repo.`);
@@ -368,7 +302,6 @@ const TillmanKnowledgeAssistant = () => {
     const femaleVoice = voices.find(voice => 
       voice.name.includes('Female') || 
       voice.name.includes('Karen') || 
-      voice.name.includes('Moira') || 
       voice.name.includes('Fiona') ||
       (voice.name.includes('Google') && voice.name.includes('US') && voice.lang === 'en-US')
     );
@@ -457,6 +390,70 @@ const TillmanKnowledgeAssistant = () => {
 TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
 ${projectDataContext}
+
+## SECTION 6: RATE CARDS (IMPORTANT: DIFFERENTIATE BETWEEN STANDARD AND SUBCONTRACTOR RATES)
+
+### TILLMAN FIBER STANDARD RATE CARD (Construction v1.1) - INTERNAL/CONSTRUCTION USE
+This card lists rates for Aerial, Buried, and Underground OSP Construction. Key items:
+*   **Aerial**:
+    *   TCA1 Place Aerial - Strand 6M to 6.6M: $1.10/FT
+    *   TCA3 Place Aerial - Self-support fiber: $1.36/FT
+    *   TCA4 Place Aerial - Self-support flexible duct: $1.55/FT
+*   **Buried (Directional Bore)**:
+    *   TCBDB2 (Standard, up to 4.0"): $10.00/FT
+    *   TCBDB4 (Standard, over 4.0" to 7.0"): $14.00/FT
+    *   TCBDB8 (Rock, up to 4.0"): $25.00/FT
+*   **Buried (Hand Dig)**:
+    *   TCBHD1 (6" cover): $4.50/FT
+    *   TCBHD2 (7"-12" cover): $5.50/FT
+    *   TCBHD6 (37"-48" cover): $11.00/FT
+*   **Buried (Missile/Stitch)**:
+    *   TCBMB1 (up to 4.0"): $9.00/FT
+    *   TCBMB2 (over 4.0" to 7.0"): $12.50/FT
+*   **Buried Support**:
+    *   TCMB1 Drop wire terminal: $50.00/EA
+    *   TCMB8 Ground rod: $50.00/EA
+    *   TCMB10 Ground wire: $2.00/FT
+*   **Restoration Hourly**:
+    *   TCHR2 CDL Truck Driver Normal: $50.00/HR
+    *   TCHR17 General Laborer Normal: $40.00/HR
+    *   TCHR27 Lineman Normal: $70.00/HR
+*   **Splicing**:
+    *   TCSS1 Cable Only <=96 fibers: $29.80/EA
+    *   TCSS3 Cable Only >96 fibers: $25.00/EA
+    *   TCSS11 Terminal Closure <= 12 Fibers: $194.00/EA
+
+### FLORIDA REGION SUBCONTRACTOR RATE CARD (Tillman Fiber 2024 - REVISED 1/31/2025) - EXTERNAL/SUB USE
+This card lists rates paid to Subcontractors. **Note the differences in pricing compared to the Standard Card.**
+*   **Aerial**:
+    *   TCA1 Place Aerial - Strand 6M to 6.6M: $0.55/FT
+    *   TCA3 Place Aerial - Self-support fiber: $0.80/FT
+    *   TCA4 Place Aerial - Self-support flexible duct: $0.90/FT
+*   **Buried (Directional Bore)**:
+    *   TCBDB2 (Standard, up to 4.0"): $7.00/FT
+    *   TCBDB4 (Standard, over 4.0" to 7.0"): $9.00/FT
+    *   TCBDB8 (Rock, up to 4.0"): $15.00/FT
+*   **Buried (Hand Dig)**:
+    *   TCBHD1 (6" cover): $2.70/FT
+    *   TCBHD2 (7"-12" cover): $3.30/FT
+    *   TCBHD6 (37"-48" cover): $4.50/FT
+*   **Buried (Missile)**:
+    *   TCBMB1 (up to 4.0"): $5.50/FT
+    *   TCBMB2 (over 4.0" to 7.0"): $7.50/FT
+*   **Buried Support**:
+    *   TCMB1 Drop wire terminal: $28.00/EA
+    *   TCMB8 Ground rod: $25.00/EA
+    *   TCMB10 Ground wire: $1.00/FT
+*   **Restoration Hourly**:
+    *   TCHR2 CDL Truck Driver Normal: $30.00/HR
+    *   TCHR17 General Laborer Normal: $24.00/HR
+    *   TCHR27 Lineman Normal: $42.00/HR
+*   **Splicing**:
+    *   TCSS1 Cable Only <=96 fibers: $17.00/EA
+    *   TCSS3 Cable Only >96 fibers: $15.00/EA
+    *   TCSS11 Terminal Closure <= 12 Fibers: $115.00/EA
+
+**KEY DIFFERENCE INSTRUCTION:** When answering questions about rates, ALWAYS specify which rate card you are referencing (Standard/Internal vs. Subcontractor/External). If the user asks generally, provide the STANDARD rate first, then mention the SUBCONTRACTOR rate as a comparison.
 
 ## SECTION 1: EXECUTION OF BOM, SOW, NTP, PO, INVOICING, CO’s & COP’s
 
@@ -579,7 +576,8 @@ CRITICAL INSTRUCTIONS:
 4.  **No Hallucinations**: NEVER invent project details. If a project isn't in the list, say so.
 5.  **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
 6.  **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
-7.  **Tone**: Professional but friendly.
+7.  **Rate Cards**: Distinguish between the "Standard Rate Card" (Internal) and "Subcontractor Rate Card" (External). If a user asks for a rate, check both and clarify the difference.
+8.  **Tone**: Professional but friendly.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
@@ -623,13 +621,12 @@ ${knowledgeBase}`;
     }
   };
 
-  // Updated quick questions to be generic to avoid 404/hallucination on specific IDs
   const quickQuestions = [
     "What is the status of a specific project?",
     "What are the bore log requirements?",
     "What's the 7-day restoration policy?",
     "How do I submit a closeout package?",
-    "Which supervisor has the most footage remaining?"
+    "What is the rate for directional boring?"
   ];
 
   return (
@@ -704,9 +701,9 @@ ${knowledgeBase}`;
       )}
 
       {/* Dashboard Toggle View */}
-      {showDashboard && projectData && (
+      {showDashboard && (
         <div className="max-w-4xl mx-auto w-full px-4 pt-6">
-          <MarketDashboard data={projectData} />
+          <ExternalDashboard />
         </div>
       )}
 
