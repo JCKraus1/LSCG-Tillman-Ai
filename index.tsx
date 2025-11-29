@@ -28,7 +28,7 @@ const TillmanKnowledgeAssistant = () => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
-      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data including costs, timelines, and status. You can type your question or click the microphone to speak. How can I help you today?"
+      content: "Hello! I'm your Tillman/Lightspeed Knowledge Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data including costs and timelines. You can type your question or click the microphone to speak. How can I help you today?"
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -233,40 +233,32 @@ const TillmanKnowledgeAssistant = () => {
           });
           
           const validRows = sheetData.map(row => {
-            // Normalize NTP Number column and Extract Market
-            // Look for any key that includes "NTP Number" (e.g., "Market 1 NTP Number", "NTP Number")
             const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
             const ntpValue = row[ntpKey];
             
-            // Extract market from header (e.g., "Market 1 NTP Number" -> "Market 1")
             let market = ntpKey.replace("NTP Number", "").trim();
-            // If extracting failed (empty string), try to use 'AREA' or default
             if (!market) {
-               // Cleanup to ensure we don't have trailing characters
                market = "General";
             }
 
             return {
               ...row,
-              'NTP Number': ntpValue, // Standardize to single key
-              'Market': market // Add explicit Market field
+              'NTP Number': ntpValue,
+              'Market': market
             };
           }).filter(row => {
             const ntpNumber = row['NTP Number'];
             
-            // Strictly require an NTP Number
             if (!ntpNumber || String(ntpNumber).trim() === '') {
               return false;
             }
 
             if (typeof ntpNumber === 'string') {
               const lowerNtp = ntpNumber.toLowerCase().trim();
-              // Check if NTP Number contains any of the excluded phrases
               const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
               if (isExcluded) return false;
             }
 
-            // Check if row has other meaningful data
             const hasData = Object.values(row).some(value => value && String(value).trim() !== '');
             if (!hasData) return false;
 
@@ -297,7 +289,7 @@ const TillmanKnowledgeAssistant = () => {
       
     } catch (error: any) {
       console.error('❌ Error loading project data:', error);
-      setProjectData(null); // Ensure data is null on error so the bot knows it's offline
+      setProjectData(null);
       setLastDataUpdate(null);
       setIsLoadingData(false);
       setDataLoadError(`Failed to load Excel data: ${error.message}. Ensure "tillman-project.xlsx" exists in the GitHub repo.`);
@@ -422,11 +414,11 @@ const TillmanKnowledgeAssistant = () => {
           const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
           const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
           const doorTagDate = project['Door Tag Date'] || 'N/A';
-          const locateDate = project['Locate Date'] || 'N/A';
-          const sowTsdDate = project['SOW TSD Date'] || 'N/A';
-          const vendorAssignment = project['Vendor Assignment'] || 'N/A';
-          const hhp = project['HHP'] || 'N/A';
-          const dateAssigned = project['Date Assigned'] || 'N/A';
+          const locateDate = project['Locate Date'] || project['locate date'] || 'N/A';
+          const sowTsdDate = project['SOW TSD Date'] || project['sow tsd date'] || 'N/A';
+          const vendorAssignment = project['Vendor Assignment'] || project['vendor assignment'] || 'N/A';
+          const hhp = project['HHP'] || project['hhp'] || 'N/A';
+          const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
           const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
 
           projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate}`;
@@ -642,6 +634,41 @@ ${projectDataContext}
     *   Contact One-Call for emergency re-locate.
     *   Notify Project Manager.
 
+## SECTION 8: INSPECTOR TRAINING & DAILY CHECKLIST
+*   **Purpose**: Guidance for consistent quality, safety, and documentation.
+*   **Responsibilities**: Ensure work meets safety standards, follows specs, documentation is accurate, report issues.
+*   **Daily Workflow**:
+    *   **Morning**: Review docs, verify PPE/equipment (Camera with Timestamp App, checklist, measuring tools), meet contractor, document starting conditions, verify permits/locates, site safety assessment.
+    *   **Mid-Day (10:00 AM)**: Complete first redline report, send to Supervisor, document progress.
+    *   **End-of-Day**: Verify work meets specs, site cleanup, final documentation, report issues to CM.
+*   **Walk Wheel Measurement Protocol (MANDATORY)**:
+    *   Walk wheeled by both supervisors and inspectors.
+    *   Completed page by page.
+    *   Document ALL DAP locations.
+    *   **Photos**: Wheel at 0 (start) and wheel at end measurement using Timestamp App.
+    *   **Deliverable**: Updated red line maps with correct footage, uploaded to "Walked out As-builts Maps" folder (project-specific subfolder).
+*   **Daily Inspection Checklist**:
+    *   **Safety**: Traffic cones, warning signs, PPE, safe parking, hazard check.
+    *   **Procedure**: Locates verified, video of entire job, "Before" photos, permits accessible, utilities potholed, pits verified at 3' depth.
+    *   **Redline**: Morning meeting, 10AM report, Toby boxes checked (2-way access/trace wire), DAP placement verified.
+    *   **QC & Restoration**: Drills use plywood, job briefing, site cleanup, restoration requirements met.
+*   **Common Issues**:
+    *   **Locate Delays**: Notify supervisor, document area, do not proceed without locates.
+    *   **Utility Conflicts**: Stop work, document, notify supervisor.
+    *   **Documentation**: Be thorough, take extra photos, use consistent naming, back up daily.
+
+## SECTION 9: TIMESTAMP CAMERA SETUP
+*   **Requirement**: Customize photo names based on project and sheet number.
+*   **Steps**:
+    1.  Click clock icon (bottom right).
+    2.  Click "Advanced".
+    3.  Click "File name format".
+    4.  Choose option starting with \`custom-input-text_\`.
+    5.  Return to main screen, click clock icon again.
+    6.  Click "Display custom text on camera".
+    7.  Input format: \`ProjectName-Sheet#\` (e.g., \`D-HDH60-Sheet5\`).
+*   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#_DateTime.jpg\`.
+
 ## SECTION 1: EXECUTION OF BOM, SOW, NTP, PO, INVOICING, CO’s & COP’s
 
 ### BILL OF MATERIALS (BOM) & SCOPE OF WORK (SOW)
@@ -749,9 +776,6 @@ ${projectDataContext}
 *   **ABF**: Air Blown Fiber.
 *   **COP**: Closeout Package.
 *   **GIG**: Good to Go / Growth Inhibiting Gaps (deficiencies).
-*   **HHP**: Households Passed (also referred to as Serviceable Addresses or SAs).
-*   **SOW Cost**: Statement of Work Estimated Cost.
-*   **TSD Date**: Target Start Date (Deadline).
 `;
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
@@ -785,7 +809,7 @@ ${knowledgeBase}`;
         }
       });
 
-      const text = response.text;
+      const text = response.text || "";
       const assistantMessage = {
         role: 'assistant',
         content: text
