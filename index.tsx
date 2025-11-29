@@ -1,7 +1,4 @@
-<change>
-<file>index.tsx</file>
-<description>Update Logo, fix Microphone to show interim results, improve mobile voice selection, and refine AI system instruction to not repeat name.</description>
-<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 
@@ -1081,5 +1078,4 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);]]></content>
-</change>
+root.render(<TillmanKnowledgeAssistant />);
