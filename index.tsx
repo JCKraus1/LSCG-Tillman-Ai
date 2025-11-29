@@ -1,4 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+<change>
+<file>index.tsx</file>
+<description>Update Logo, fix Microphone to show interim results, improve mobile voice selection, and refine AI system instruction to not repeat name.</description>
+<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 
@@ -77,25 +80,32 @@ const TillmanKnowledgeAssistant = () => {
       const voices = synthRef.current.getVoices();
       setAvailableVoices(voices);
 
-      // Load preference from localStorage or use default logic
+      // Load preference from localStorage
       const savedVoice = localStorage.getItem('tillman_assistant_voice');
       
       if (savedVoice && voices.some(v => v.name === savedVoice)) {
         setSelectedVoiceName(savedVoice);
       } else {
-        // Default Logic: Google UK English Female -> Moira -> Victoria -> Samantha -> First Female -> Default
-        const ukFemale = voices.find(v => v.name.includes('Google UK English Female'));
-        const moira = voices.find(v => v.name.includes('Moira'));
-        const victoria = voices.find(v => v.name.includes('Victoria'));
-        const samantha = voices.find(v => v.name.includes('Samantha'));
-        const female = voices.find(v => v.name.includes('Female'));
-        
-        if (ukFemale) setSelectedVoiceName(ukFemale.name);
-        else if (moira) setSelectedVoiceName(moira.name);
-        else if (victoria) setSelectedVoiceName(victoria.name);
-        else if (samantha) setSelectedVoiceName(samantha.name);
-        else if (female) setSelectedVoiceName(female.name);
-        else if (voices.length > 0) setSelectedVoiceName(voices[0].name);
+        // Smart Voice Selection for Mobile vs Desktop
+        // On Mobile (iOS/Android), the 'default' voice is usually the best (Siri/Google Assistant)
+        const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+        const defaultVoice = voices.find(v => v.default);
+
+        if (isMobile && defaultVoice) {
+           setSelectedVoiceName(defaultVoice.name);
+        } else {
+          // Fallback Logic for Desktop: specific preferred voices
+          const moira = voices.find(v => v.name.includes('Moira'));
+          const victoria = voices.find(v => v.name.includes('Victoria'));
+          const samantha = voices.find(v => v.name.includes('Samantha'));
+          const female = voices.find(v => v.name.includes('Female') || v.name.includes('Google US English'));
+          
+          if (moira) setSelectedVoiceName(moira.name);
+          else if (victoria) setSelectedVoiceName(victoria.name);
+          else if (samantha) setSelectedVoiceName(samantha.name);
+          else if (female) setSelectedVoiceName(female.name);
+          else if (voices.length > 0) setSelectedVoiceName(voices[0].name);
+        }
       }
     };
 
@@ -104,17 +114,28 @@ const TillmanKnowledgeAssistant = () => {
       synthRef.current.onvoiceschanged = loadVoices;
     }
 
+    // Setup Speech Recognition
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = false;
+      recognitionRef.current.interimResults = true; // IMPORTANT: Set to true to see text while speaking
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
-        const transcript = event.results[0][0].transcript;
-        setInputText(transcript);
-        setIsListening(false);
+        let finalTranscript = '';
+        // Iterate through results to handle interim vs final
+        for (let i = event.resultIndex; i < event.results.length; ++i) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+            // If we have a final result, we can optionally auto-send or just set state
+            setInputText(finalTranscript);
+            setIsListening(false);
+          } else {
+            // Show interim results in input box
+            setInputText(event.results[i][0].transcript);
+          }
+        }
       };
 
       recognitionRef.current.onerror = (event: any) => {
@@ -798,7 +819,7 @@ CRITICAL INSTRUCTIONS:
     *   **SOW Estimated Cost**: The estimated cost for the project.
     *   **On Track or In Jeopardy**: The health status of the project.
 9.  **Tone**: Professional but friendly.
-10. **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant.
+10. **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant. **Do not start every response by stating your name. Only state it if asked.**
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
@@ -856,12 +877,9 @@ ${knowledgeBase}`;
       <div className="bg-gradient-to-r from-[#383e4b] to-[#000000] text-white p-4 shadow-lg header-buttons flex-none sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
-             {/* Logo Placeholder or SVG */}
-             <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center text-blue-900 font-bold text-lg overflow-hidden shadow-md">
-                <svg viewBox="0 0 100 100" className="w-full h-full p-1">
-                   <path d="M50 10 L90 90 L10 90 Z" fill="#383e4b" stroke="none" />
-                   <circle cx="50" cy="60" r="15" fill="white" />
-                </svg>
+             {/* Logo */}
+             <div className="h-10 w-auto flex items-center justify-center">
+                <img src="./LSCG_Logo_White_transparentbackground (1).png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
              </div>
             <div>
               <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
@@ -1063,4 +1081,5 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);
+root.render(<TillmanKnowledgeAssistant />);]]></content>
+</change>
