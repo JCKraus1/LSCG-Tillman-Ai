@@ -1,5 +1,7 @@
-
-import React, { useState, useRef, useEffect } from "react";
+<change>
+<file>index.tsx</file>
+<description>Remove 100 project limit to send all data to AI context, and switch preferred voice to Victoria.</description>
+<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 
@@ -35,7 +37,6 @@ const TillmanKnowledgeAssistant = () => {
   const autoRefreshInterval = useRef<any>(null);
 
   // Initialize Google GenAI Client
-  // Using process.env.API_KEY as per guidelines
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
   // Initialize speech recognition and synthesis
@@ -110,14 +111,16 @@ const TillmanKnowledgeAssistant = () => {
         console.log('✅ SheetJS loaded');
       }
 
-      console.log('Fetching Excel file...');
-      const response = await fetch('https://jckraus1.github.io/Tillman-Dashboard/tillman-project.xlsx', {
-        mode: 'cors',
+      const excelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/tillman-project.xlsx';
+      console.log(`Fetching Excel file from: ${excelUrl}`);
+      
+      // Removed mode: 'cors' to allow standard simple request which usually works better with GitHub Pages
+      const response = await fetch(excelUrl, {
         cache: 'no-cache'
       });
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status} - ${response.statusText}`);
       }
       
       const arrayBuffer = await response.arrayBuffer();
@@ -157,8 +160,14 @@ const TillmanKnowledgeAssistant = () => {
 
             // Filter out placeholder rows based on NTP Number (Column A)
             const ntpNumber = row['NTP Number'];
-            if (ntpNumber && typeof ntpNumber === 'string') {
-              const lowerNtp = ntpNumber.toLowerCase();
+            
+            // Strictly require an NTP Number
+            if (!ntpNumber || String(ntpNumber).trim() === '') {
+              return false;
+            }
+
+            if (typeof ntpNumber === 'string') {
+              const lowerNtp = ntpNumber.toLowerCase().trim();
               // Check if NTP Number contains any of the excluded phrases
               const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
               if (isExcluded) return false;
@@ -180,21 +189,21 @@ const TillmanKnowledgeAssistant = () => {
       });
       
       if (allData.length === 0) {
-        throw new Error('No data found in target sheets');
+        throw new Error('No valid project rows found in target sheets.');
       }
       
       setProjectData(allData);
       setLastDataUpdate(new Date().toLocaleString());
       setIsLoadingData(false);
       setDataLoadError(null);
-      console.log('✅ Project data loaded successfully');
+      console.log('✅ Project data loaded successfully:', allData.length, 'rows');
       
     } catch (error: any) {
       console.error('❌ Error loading project data:', error);
-      setProjectData(null);
+      setProjectData(null); // Ensure data is null on error so the bot knows it's offline
       setLastDataUpdate(null);
       setIsLoadingData(false);
-      setDataLoadError(`Failed to load project data. ${error.message}`);
+      setDataLoadError(`Failed to load Excel data: ${error.message}. Ensure "tillman-project.xlsx" exists in the GitHub repo.`);
     }
   };
 
@@ -250,18 +259,20 @@ const TillmanKnowledgeAssistant = () => {
     
     const voices = synthRef.current.getVoices();
     
-    // Prioritize Samantha, then other female voices
+    // Prioritize Victoria, then Samantha, then other female voices
+    const victoriaVoice = voices.find(voice => voice.name.includes('Victoria'));
     const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
     const femaleVoice = voices.find(voice => 
       voice.name.includes('Female') || 
-      voice.name.includes('Victoria') ||
       voice.name.includes('Karen') ||
       voice.name.includes('Moira') ||
       voice.name.includes('Fiona') ||
       (voice.name.includes('Google') && voice.name.includes('US') && voice.lang === 'en-US')
     );
     
-    if (samanthaVoice) {
+    if (victoriaVoice) {
+        utterance.voice = victoriaVoice;
+    } else if (samanthaVoice) {
       utterance.voice = samanthaVoice;
     } else if (femaleVoice) {
       utterance.voice = femaleVoice;
@@ -290,6 +301,8 @@ const TillmanKnowledgeAssistant = () => {
 
     try {
       let projectDataContext = '';
+      
+      // CRITICAL CHECK: Only build context if data is loaded
       if (projectData && projectData.length > 0) {
         projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
         
@@ -314,13 +327,14 @@ const TillmanKnowledgeAssistant = () => {
 
         projectDataContext += `\n\n**DETAILED PROJECT DATA:**\n`;
         
-        projectData.slice(0, 50).forEach(project => {
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline: ${project['SOW TSD Date']}`;
+        // Removed limit: Including ALL projects to give AI full context
+        projectData.forEach(project => {
+          // Explicitly mapping Project Completion Date
+          const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline: ${project['SOW TSD Date']} | Completion Date: ${completionDate}`;
         });
-
-        if (projectData.length > 50) {
-          projectDataContext += `\n\n(Showing 50 of ${projectData.length} total projects)`;
-        }
+      } else {
+        projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
       }
 
       // Consolidating knowledge from the provided documents
@@ -438,20 +452,19 @@ ${projectDataContext}
 *   **GIG**: Good to Go / Growth Inhibiting Gaps (deficiencies).
 `;
 
-      const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group. You have access to the complete, authoritative knowledge base of all procedures, policies, and standards, AND you have access to live project data.
+      const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
+
+CRITICAL DATA AVAILABILITY STATUS:
+${projectData && projectData.length > 0 ? "ONLINE - Project Data Available" : "OFFLINE - NO PROJECT DATA"}
 
 CRITICAL INSTRUCTIONS:
-1. Answer from the knowledge base and live project data provided below.
-2. When asked about specific projects, look at the LIVE PROJECT DATA section. The "NTP Number" is listed in Column A of the Excel data and serves as the Project Name/Number. Always search the 'NTP Number' field for project identifiers.
-3. When asked about procedures, use the knowledge base.
-4. Be SPECIFIC - cite exact timelines, project numbers, supervisor names.
-5. Mention responsible ROLES (Project Coordinator, Construction Vendor, PM, VM, etc.).
-6. Be CONCISE but THOROUGH - field personnel need quick, accurate answers.
-7. Use PROFESSIONAL but FRIENDLY language.
-8. If the information to answer the question is not found in the knowledge base or live project data, you MUST reply with exactly: "Please ask the assigned supervisor."
-9. NEVER make up projects, supervisors, or data.
-10. Format answers clearly with bullet points when listing steps.
-11. For project questions, provide work order numbers, supervisor names, status, and footage.
+1.  **IF PROJECT DATA IS OFFLINE**: You MUST NOT answer questions about specific project numbers, status, or supervisors. You MUST reply with: "I'm sorry, but the live project database is currently unavailable. Please ask the assigned supervisor for details."
+2.  **IF PROJECT DATA IS ONLINE**: Use the "LIVE PROJECT DATA" section to answer. The "NTP Number" (Column A) is the project identifier.
+3.  **Procedures**: Always use the knowledge base for procedure questions (BOM, NTP, Safety, etc.) regardless of data status.
+4.  **No Hallucinations**: NEVER invent project details. If a project isn't in the list, say so.
+5.  **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
+6.  **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
+7.  **Tone**: Professional but friendly.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
@@ -495,8 +508,9 @@ ${knowledgeBase}`;
     }
   };
 
+  // Updated quick questions to be generic to avoid 404/hallucination on specific IDs
   const quickQuestions = [
-    "What's the status of project D-HDH54?",
+    "What is the status of a specific project?",
     "What are the bore log requirements?",
     "What's the 7-day restoration policy?",
     "How do I submit a closeout package?",
@@ -547,6 +561,19 @@ ${knowledgeBase}`;
           </button>
         </div>
       </div>
+
+      {/* Data Load Error Banner - Visible if Excel fails to load */}
+      {dataLoadError && (
+        <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{dataLoadError}</span>
+          </div>
+          <button onClick={loadSheetJSAndFetchData} className="text-red-700 underline font-semibold hover:text-red-900">Retry</button>
+        </div>
+      )}
 
       {/* Quick Questions */}
       {messages.length === 1 && (
@@ -642,4 +669,5 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);
+root.render(<TillmanKnowledgeAssistant />);]]></content>
+</change>
