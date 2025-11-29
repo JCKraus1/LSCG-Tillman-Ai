@@ -1,4 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+<change>
+<file>index.tsx</file>
+<description>Add Settings Modal for voice selection, saving preferences, downloading transcript, and printing chat.</description>
+<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 
@@ -14,7 +17,7 @@ declare global {
 // External Dashboard Component using Iframe
 const ExternalDashboard = () => {
   return (
-    <div className="bg-white p-1 rounded-xl shadow-md border border-blue-100 mb-4 h-[600px] w-full animate-fade-in overflow-hidden">
+    <div className="bg-white p-1 rounded-xl shadow-md border border-blue-100 mb-4 h-[600px] w-full animate-fade-in overflow-hidden no-print">
       <iframe 
         src="https://jckraus1.github.io/Tillman-Dashboard/Tillman%20Dashboard.html" 
         className="w-full h-full border-0"
@@ -43,6 +46,11 @@ const TillmanKnowledgeAssistant = () => {
   const [apiKeyError, setApiKeyError] = useState<boolean>(false);
   const [showDashboard, setShowDashboard] = useState(false);
   
+  // Settings State
+  const [showSettings, setShowSettings] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceName, setSelectedVoiceName] = useState<string>('');
+  
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -70,8 +78,25 @@ const TillmanKnowledgeAssistant = () => {
   useEffect(() => {
     const loadVoices = () => {
       const voices = synthRef.current.getVoices();
-      if (voices.length > 0) {
-        console.log('Available voices:', voices.map(v => v.name));
+      setAvailableVoices(voices);
+
+      // Load preference from localStorage or use default logic
+      const savedVoice = localStorage.getItem('tillman_assistant_voice');
+      
+      if (savedVoice && voices.some(v => v.name === savedVoice)) {
+        setSelectedVoiceName(savedVoice);
+      } else {
+        // Default Logic: Moira -> Victoria -> Samantha -> First Female -> Default
+        const moira = voices.find(v => v.name.includes('Moira'));
+        const victoria = voices.find(v => v.name.includes('Victoria'));
+        const samantha = voices.find(v => v.name.includes('Samantha'));
+        const female = voices.find(v => v.name.includes('Female') || v.name.includes('Google US English'));
+        
+        if (moira) setSelectedVoiceName(moira.name);
+        else if (victoria) setSelectedVoiceName(victoria.name);
+        else if (samantha) setSelectedVoiceName(samantha.name);
+        else if (female) setSelectedVoiceName(female.name);
+        else if (voices.length > 0) setSelectedVoiceName(voices[0].name);
       }
     };
 
@@ -119,6 +144,37 @@ const TillmanKnowledgeAssistant = () => {
       synthRef.current.cancel();
     }
   }, [isSpeaking]);
+
+  // Handle Voice Change
+  const handleVoiceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const newVoice = e.target.value;
+    setSelectedVoiceName(newVoice);
+    localStorage.setItem('tillman_assistant_voice', newVoice);
+    
+    // Test the voice
+    synthRef.current.cancel();
+    const utterance = new SpeechSynthesisUtterance("Voice updated.");
+    const voiceObj = availableVoices.find(v => v.name === newVoice);
+    if (voiceObj) utterance.voice = voiceObj;
+    synthRef.current.speak(utterance);
+  };
+
+  // Chat Actions
+  const handleDownloadChat = () => {
+    const transcript = messages.map(m => `[${m.role.toUpperCase()}]: ${m.content}`).join('\n\n');
+    const blob = new Blob([transcript], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `tillman-chat-transcript-${new Date().toISOString().split('T')[0]}.txt`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  };
+
+  const handlePrintChat = () => {
+    window.print();
+  };
 
   // Load project data from Excel
   const loadSheetJSAndFetchData = async () => {
@@ -293,27 +349,10 @@ const TillmanKnowledgeAssistant = () => {
     utterance.pitch = 1.0; 
     utterance.volume = 1.0;
     
-    const voices = synthRef.current.getVoices();
-    
-    // Prioritize Moira, then Victoria, then other female voices
-    const moiraVoice = voices.find(voice => voice.name.includes('Moira'));
-    const victoriaVoice = voices.find(voice => voice.name.includes('Victoria'));
-    const samanthaVoice = voices.find(voice => voice.name.includes('Samantha'));
-    const femaleVoice = voices.find(voice => 
-      voice.name.includes('Female') || 
-      voice.name.includes('Karen') || 
-      voice.name.includes('Fiona') ||
-      (voice.name.includes('Google') && voice.name.includes('US') && voice.lang === 'en-US')
-    );
-    
-    if (moiraVoice) {
-        utterance.voice = moiraVoice;
-    } else if (victoriaVoice) {
-        utterance.voice = victoriaVoice;
-    } else if (samanthaVoice) {
-      utterance.voice = samanthaVoice;
-    } else if (femaleVoice) {
-      utterance.voice = femaleVoice;
+    // Use selected voice from state
+    if (selectedVoiceName) {
+      const voice = availableVoices.find(v => v.name === selectedVoiceName);
+      if (voice) utterance.voice = voice;
     }
 
     utterance.onstart = () => setIsSpeaking(true);
@@ -350,7 +389,6 @@ const TillmanKnowledgeAssistant = () => {
     try {
       let projectDataContext = '';
       
-      // CRITICAL CHECK: Only build context if data is loaded
       if (projectData && projectData.length > 0) {
         projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
         
@@ -375,9 +413,7 @@ const TillmanKnowledgeAssistant = () => {
 
         projectDataContext += `\n\n**DETAILED PROJECT DATA:**\n`;
         
-        // Removed limit: Including ALL projects to give AI full context
         projectData.forEach(project => {
-          // Explicitly mapping Project Completion Date
           const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
           projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline: ${project['SOW TSD Date']} | Completion Date: ${completionDate}`;
         });
@@ -385,7 +421,6 @@ const TillmanKnowledgeAssistant = () => {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
       }
 
-      // Consolidating knowledge from the provided documents
       const knowledgeBase = `
 TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
@@ -632,7 +667,7 @@ ${knowledgeBase}`;
   return (
     <div className="flex flex-col h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
       {/* Header */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 shadow-lg">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white p-6 shadow-lg header-buttons">
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -668,6 +703,9 @@ ${knowledgeBase}`;
             <button onClick={() => setShowDashboard(!showDashboard)} className={`p-3 rounded-full transition-all ${showDashboard ? 'bg-white text-blue-600' : 'bg-white/10 hover:bg-white/20 text-white'}`} title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}>
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             </button>
+            <button onClick={() => setShowSettings(!showSettings)} className={`p-3 rounded-full transition-all ${showSettings ? 'bg-white text-blue-600' : 'bg-white/10 hover:bg-white/20 text-white'}`} title="Settings">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+            </button>
             <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-3 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
               {autoSpeak ? (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
@@ -679,9 +717,62 @@ ${knowledgeBase}`;
         </div>
       </div>
 
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in no-print" onClick={() => setShowSettings(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-xl font-bold text-gray-800">Settings</h3>
+              <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Voice Selection</label>
+                <select 
+                  value={selectedVoiceName}
+                  onChange={handleVoiceChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                >
+                  <option value="">Default Voice</option>
+                  {availableVoices.map((voice) => (
+                    <option key={voice.name} value={voice.name}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </select>
+                <p className="text-xs text-gray-500 mt-1">Changes are saved automatically.</p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Chat Actions</label>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleDownloadChat}
+                    className="flex-1 bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Save Transcript
+                  </button>
+                  <button 
+                    onClick={handlePrintChat}
+                    className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    Print Chat
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* API Key Error Banner */}
       {apiKeyError && (
-        <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md">
+        <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md no-print">
           ⚠️ MISSING API KEY: The application cannot connect to Gemini. <br/>
           If you are running on GitHub Pages, you must manually set your API key in the index.html file (line 30).
         </div>
@@ -689,7 +780,7 @@ ${knowledgeBase}`;
 
       {/* Data Load Error Banner - Visible if Excel fails to load */}
       {dataLoadError && (
-        <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between">
+        <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between no-print">
           <div className="flex items-center gap-2">
             <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -702,14 +793,14 @@ ${knowledgeBase}`;
 
       {/* Dashboard Toggle View */}
       {showDashboard && (
-        <div className="max-w-4xl mx-auto w-full px-4 pt-6">
+        <div className="max-w-4xl mx-auto w-full px-4 pt-6 no-print">
           <ExternalDashboard />
         </div>
       )}
 
       {/* Quick Questions */}
       {messages.length === 1 && !showDashboard && (
-        <div className="max-w-4xl mx-auto w-full px-4 py-6">
+        <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print">
           <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {quickQuestions.map((question, idx) => (
@@ -723,14 +814,14 @@ ${knowledgeBase}`;
       )}
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6">
+      <div className="flex-1 overflow-y-auto px-4 py-6 chat-container">
         <div className="max-w-4xl mx-auto space-y-4">
           {messages.map((message, idx) => (
-            <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[80%] rounded-2xl px-5 py-3 shadow-sm ${message.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 border border-gray-200'}`}>
+            <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper`}>
+              <div className={`max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message' : 'bg-white text-gray-800 border border-gray-200 assistant-message'}`}>
                 <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
                 {message.role === 'assistant' && idx === messages.length - 1 && !isLoading && (
-                  <button onClick={() => speakText(message.content)} className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1">
+                  <button onClick={() => speakText(message.content)} className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 no-print">
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
                     Read aloud
                   </button>
@@ -739,7 +830,7 @@ ${knowledgeBase}`;
             </div>
           ))}
           {isLoading && (
-            <div className="flex justify-start">
+            <div className="flex justify-start no-print">
               <div className="bg-white rounded-2xl px-5 py-3 shadow-sm border border-gray-200">
                 <svg className="w-5 h-5 animate-spin text-blue-600" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
               </div>
@@ -750,7 +841,7 @@ ${knowledgeBase}`;
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 p-4 shadow-lg">
+      <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-end">
             <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed`} title={isListening ? 'Stop listening' : 'Click to speak'}>
@@ -789,7 +880,7 @@ ${knowledgeBase}`;
       </div>
 
       {/* Usage Tips */}
-      <div className="bg-blue-50 border-t border-blue-100 px-4 py-2">
+      <div className="bg-blue-50 border-t border-blue-100 px-4 py-2 no-print">
         <div className="max-w-4xl mx-auto text-xs text-blue-700 flex items-center justify-center gap-4 flex-wrap">
           <span>💡 Ask about procedures, timelines, requirements, or standards</span>
           <span>•</span>
@@ -801,4 +892,5 @@ ${knowledgeBase}`;
 };
 
 const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);
+root.render(<TillmanKnowledgeAssistant />);]]></content>
+</change>
