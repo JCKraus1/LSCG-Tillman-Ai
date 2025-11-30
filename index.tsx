@@ -1,4 +1,7 @@
-import React, { useState, useRef, useEffect } from "react";
+<change>
+<file>index.tsx</file>
+<description>Clean index.tsx to ensure valid syntax and correct logic for data fetching and dashboard.</description>
+<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 
@@ -202,7 +205,6 @@ const TillmanKnowledgeAssistant = () => {
       }
 
       const projectExcelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/tillman-project.xlsx';
-      // Updated URL for Locate Tickets
       const locateExcelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/locate-tickets.xlsx';
       
       console.log(`Fetching Excel files...`);
@@ -240,10 +242,19 @@ const TillmanKnowledgeAssistant = () => {
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { raw: false, defval: '' });
                 
                 locateRawData.forEach(row => {
-                    const mapNum = row['Map #']; // Key mapping
+                    // Normalize keys: remove spaces, lowercase
+                    // We look for the key that contains "Map #"
+                    const normalizedRow: any = {};
+                    Object.keys(row).forEach(k => {
+                        normalizedRow[k.trim().toLowerCase()] = row[k];
+                    });
+                    
+                    // Try to find Map # value. Key might be "map #" or "map#"
+                    const mapNum = normalizedRow['map #'] || normalizedRow['map#'] || normalizedRow['project'] || normalizedRow['ntp number'];
+                    
                     if (mapNum) {
                         const key = String(mapNum).trim();
-                        locateMap[key] = row;
+                        locateMap[key] = row; // Store original row
                     }
                 });
                 console.log(`✅ Loaded ${Object.keys(locateMap).length} locate records.`);
@@ -537,7 +548,7 @@ const TillmanKnowledgeAssistant = () => {
               locateDetails = `Tickets: ${[l['Locate ticket'], l['2nd ticket'], l['3rd ticket'], l['4th ticket']].filter(Boolean).join(', ')} | Phone: ${l['Locate Number']} | Status: ${l['TICKET STATUS']} | Due: ${l['DUE DATE']} | Expires: ${l['EXPIRE DATE']}`;
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Locates: { ${locateDetails} }`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Locates: { ${locateDetails} }`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
