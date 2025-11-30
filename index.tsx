@@ -183,6 +183,9 @@ const TillmanKnowledgeAssistant = () => {
     window.print();
   };
 
+  // Helper to normalize keys for flexible matching
+  const normalizeKey = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, '');
+
   // Load project data from Excel
   const loadSheetJSAndFetchData = async () => {
     setIsLoadingData(true);
@@ -222,7 +225,9 @@ const TillmanKnowledgeAssistant = () => {
       else console.warn("Failed to fetch Locate Excel:", results[1].reason);
 
       // --- PARSE LOCATE TICKETS ---
-      const locateMap: Record<string, any> = {};
+      // Using a Map where Key = Map # (Project ID), Value = Array of Ticket Objects
+      const locateMap: Record<string, any[]> = {};
+      
       if (locateResponse && locateResponse.ok) {
          try {
             const locateArrayBuffer = await locateResponse.arrayBuffer();
@@ -236,32 +241,55 @@ const TillmanKnowledgeAssistant = () => {
             if (locateSheetName) {
                 console.log(`✅ Found Locate Sheet: ${locateSheetName}`);
                 const locateSheet = locateWorkbook.Sheets[locateSheetName];
-                // FORCE READING OF ALL ROWS by not relying on auto-detection
+                // FORCE READING OF ALL ROWS
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { 
                     raw: false, 
                     defval: '',
                     blankrows: false,
-                    range: 0 // Force read from A1
+                    range: 0 
                 });
                 
                 locateRawData.forEach(row => {
-                    // Normalize keys: remove spaces, lowercase
-                    const normalizedRow: any = {};
-                    Object.keys(row).forEach(k => {
-                        normalizedRow[k.trim().toLowerCase()] = row[k];
-                    });
+                    // Flexible key matching for "Map #"
+                    let mapNum = row['Map #'] || row['Map#'] || row['map #'] || row['map#'] || row['Project'] || row['NTP Number'];
                     
-                    // Try to find Map # value. Key might be "map #" or "map#" or "project"
-                    const mapNum = normalizedRow['map #'] || normalizedRow['map#'] || normalizedRow['project'] || normalizedRow['ntp number'];
-                    
+                    // Check common alternative keys if direct access fails (due to spaces etc)
+                    if (!mapNum) {
+                       const keys = Object.keys(row);
+                       const mapKey = keys.find(k => normalizeKey(k) === 'map' || normalizeKey(k).includes('map#'));
+                       if (mapKey) mapNum = row[mapKey];
+                    }
+
                     if (mapNum) {
                         const key = String(mapNum).trim();
-                        if (key.length > 2) {
-                            locateMap[key] = row; // Store original row
+                        if (key.length > 2) { // Basic validation to ignore empty/garbage rows
+                            if (!locateMap[key]) {
+                                locateMap[key] = [];
+                            }
+                            // Extract specific fields as requested
+                            const ticketData = {
+                                ticket1: row['Locate ticket'] || '',
+                                ticket2: row['2nd ticket'] || '',
+                                ticket3: row['3rd ticket'] || '',
+                                ticket4: row['4th ticket'] || '',
+                                phone: row['Locate Number'] || '',
+                                area: row['AREA'] || '',
+                                company: row['COMPANY NAME'] || '',
+                                dateCalled: row['DATE CALLED'] || '',
+                                dueDate: row['DUE DATE'] || '',
+                                expireDate: row['EXPIRE DATE'] || '',
+                                escalated: row['DATE ESCALATED'] || '',
+                                status: row['TICKET STATUS'] || '',
+                                completed: row['DATE TICKET COMPLETED'] || '',
+                                footage: row['FOOTAGE'] || '',
+                                notes: row['NOTES'] || '',
+                                fullRow: row // Keep full row just in case
+                            };
+                            locateMap[key].push(ticketData);
                         }
                     }
                 });
-                console.log(`✅ Loaded ${Object.keys(locateMap).length} locate records.`);
+                console.log(`✅ Loaded locate records for ${Object.keys(locateMap).length} unique projects.`);
             } else {
                 console.warn("⚠️ 'Master' sheet not found in Locate Tickets file. Available sheets:", locateWorkbook.SheetNames);
             }
@@ -309,15 +337,15 @@ const TillmanKnowledgeAssistant = () => {
                 let market = ntpKey.replace("NTP Number", "").trim();
                 if (!market) market = "General";
 
-                // Merge Locate Data if available
+                // Merge Locate Data (Array of tickets)
                 const ntpStr = String(ntpValue || '').trim();
-                const locateInfo = locateMap[ntpStr] || null;
+                const locateInfo = locateMap[ntpStr] || [];
 
                 return {
                 ...row,
                 'NTP Number': ntpValue,
                 'Market': market,
-                'LocateInfo': locateInfo // Attach locate data to project
+                'LocateTickets': locateInfo // Attach ARRAY of locate tickets
                 };
             }).filter(row => {
                 const ntpNumber = row['NTP Number'];
@@ -548,14 +576,18 @@ const TillmanKnowledgeAssistant = () => {
           const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
           const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
 
-          // Format Locate Info if available
-          let locateDetails = "No locate data found.";
-          if (project['LocateInfo']) {
-              const l = project['LocateInfo'];
-              locateDetails = `Tickets: ${[l['Locate ticket'], l['2nd ticket'], l['3rd ticket'], l['4th ticket']].filter(Boolean).join(', ')} | Phone: ${l['Locate Number']} | Status: ${l['TICKET STATUS']} | Due: ${l['DUE DATE']} | Expires: ${l['EXPIRE DATE']}`;
+          // Format Locate Info if available (Array of tickets)
+          let locateDetailsStr = "No locate data found.";
+          if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
+             const tickets = project['LocateTickets'];
+             locateDetailsStr = tickets.map((l: any, idx: number) => {
+                 // Format each ticket entry
+                 const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4].filter(t => t && t.trim() !== '').join(', ');
+                 return `Entry ${idx + 1}: Tickets=[${ticketNums}] Phone=${l.phone} Status=${l.status} Due=${l.dueDate} Exp=${l.expireDate} Area=${l.area} Co=${l.company} Notes=${l.notes}`;
+             }).join('; ');
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Locates: { ${locateDetails} }`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets: ${locateDetailsStr}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
@@ -856,7 +888,6 @@ ${knowledgeBase}`;
         }
       });
 
-      // Correctly access text as a property, NOT a function call
       const text = response.text;
       const assistantMessage = {
         role: 'assistant',
@@ -928,146 +959,171 @@ ${knowledgeBase}`;
         </div>
       </div>
 
-      {/* Main Content Area */}
-      <div className="flex-1 overflow-hidden relative flex flex-col">
-        {showDashboard && (
-             <div className="p-4 bg-gray-100/10 backdrop-blur-md">
-                <ExternalDashboard />
-             </div>
-        )}
-        
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
-           {messages.map((msg, index) => (
-             <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-               <div className={`max-w-[85%] rounded-2xl p-4 shadow-md ${
-                 msg.role === 'user' 
-                   ? 'bg-blue-600 text-white rounded-br-none' 
-                   : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
-               }`}>
-                 {/* Content rendering with links */}
-                 <div className="markdown-body text-sm leading-relaxed whitespace-pre-wrap">
-                   {renderMessageContent(msg.content)}
-                 </div>
-               </div>
-             </div>
-           ))}
-           <div ref={messagesEndRef} />
-           {isLoading && (
-              <div className="flex justify-start animate-pulse">
-                <div className="bg-white/80 rounded-2xl p-4 rounded-bl-none shadow-sm flex items-center gap-2">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
-                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
-                </div>
-              </div>
-           )}
-        </div>
-
-        {/* Input Area */}
-        <div className="p-4 bg-black/20 backdrop-blur-md border-t border-white/10">
-           {/* Quick Questions */}
-           <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
-              {quickQuestions.map((q, i) => (
-                <button 
-                  key={i} 
-                  onClick={() => sendMessage(q)}
-                  className="whitespace-nowrap px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs rounded-full border border-white/10 transition-colors"
-                >
-                  {q}
-                </button>
-              ))}
-           </div>
-
-           <div className="relative flex items-center gap-2 max-w-4xl mx-auto">
-              <button 
-                onClick={toggleListening}
-                className={`p-3 rounded-full transition-all flex-none ${
-                  isListening 
-                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
-                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
-                }`}
-                title="Voice Input"
-              >
-                {/* Mic Icon */}
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-              </button>
-              
-              <div className="flex-1 relative">
-                <textarea
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder="Ask about Tillman projects, procedures, or rates..."
-                  className="w-full bg-white/10 border border-white/10 text-white placeholder-gray-400 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/20 resize-none h-[52px] scrollbar-hide"
-                  rows={1}
-                />
-                <button
-                  onClick={() => sendMessage()}
-                  disabled={isLoading || !inputText.trim()}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-                </button>
-              </div>
-           </div>
-           
-           <div className="text-center mt-2">
-              <p className="text-[10px] text-gray-400">
-                {isLoadingData ? "🔄 Updating project data..." : `Last updated: ${lastDataUpdate || 'Never'}`}
-                {dataLoadError && <span className="text-red-400 ml-2">⚠️ Data Error</span>}
-                {apiKeyError && <span className="text-red-400 ml-2">⚠️ API Key Missing</span>}
-              </p>
-           </div>
-        </div>
-      </div>
-
       {/* Settings Modal */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
-            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
-              <h3 className="font-bold text-gray-800">Assistant Settings</h3>
-              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600">
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in no-print" onClick={() => setShowSettings(false)}>
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
+            <div className="flex justify-between items-center border-b pb-3">
+              <h3 className="text-xl font-bold text-gray-800">Settings</h3>
+              <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </div>
-            <div className="p-6 space-y-4">
+            
+            <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Voice Selection</label>
                 <select 
-                  value={selectedVoiceName} 
+                  value={selectedVoiceName}
                   onChange={handleVoiceChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 >
-                  {availableVoices.map(voice => (
+                  <option value="">Default Voice</option>
+                  {availableVoices.map((voice) => (
                     <option key={voice.name} value={voice.name}>
                       {voice.name} ({voice.lang})
                     </option>
                   ))}
                 </select>
+                <p className="text-xs text-gray-500 mt-1">Changes are saved automatically.</p>
               </div>
-              
-              <div className="pt-4 border-t border-gray-100 flex gap-2">
-                <button 
-                  onClick={handleDownloadChat}
-                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                  Download Chat
-                </button>
-                <button 
-                  onClick={handlePrintChat}
-                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                  Print Chat
-                </button>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Chat Actions</label>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={handleDownloadChat}
+                    className="flex-1 bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                    Save Transcript
+                  </button>
+                  <button 
+                    onClick={handlePrintChat}
+                    className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 font-medium"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                    Print Chat
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
+
+      {/* API Key Error Banner */}
+      {apiKeyError && (
+        <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md no-print">
+          ⚠️ MISSING API KEY: The application cannot connect to Gemini. <br/>
+          If you are running on GitHub Pages, you must manually set your API key in the index.html file (line 30).
+        </div>
+      )}
+
+      {/* Data Load Error Banner - Visible if Excel fails to load */}
+      {dataLoadError && (
+        <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between no-print">
+          <div className="flex items-center gap-2">
+            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>{dataLoadError}</span>
+          </div>
+          <button onClick={loadSheetJSAndFetchData} className="text-red-700 underline font-semibold hover:text-red-900">Retry</button>
+        </div>
+      )}
+
+      {/* Dashboard Toggle View */}
+      {showDashboard && (
+        <div className="max-w-4xl mx-auto w-full px-4 pt-6 no-print flex-none">
+          <ExternalDashboard />
+        </div>
+      )}
+
+      {/* Quick Questions */}
+      {messages.length === 1 && !showDashboard && (
+        <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print flex-none">
+          <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+            {quickQuestions.map((question, idx) => (
+              <button key={idx} onClick={() => sendMessage(question)} className="text-left p-3 bg-white rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition-all border border-gray-200 text-sm animate-fade-in" style={{animationDelay: `${idx * 100}ms`}}>
+                <svg className="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+                {question}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Messages */}
+      <div className="flex-1 overflow-y-auto px-4 py-6 chat-container bg-[#f3f4f6] w-full">
+        <div className="max-w-4xl mx-auto space-y-4 pb-20">
+          {messages.map((message, idx) => (
+            <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper animate-message`}>
+              <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 assistant-message rounded-bl-none'}`}>
+                <div className="whitespace-pre-wrap text-sm leading-relaxed">
+                   {message.role === 'assistant' ? renderMessageContent(message.content) : message.content}
+                </div>
+                {message.role === 'assistant' && idx === messages.length - 1 && !isLoading && (
+                  <button onClick={() => speakText(message.content)} className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 no-print font-medium">
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                    Read aloud
+                  </button>
+                )}
+              </div>
+            </div>
+          ))}
+          {isLoading && (
+            <div className="flex justify-start no-print animate-message">
+              <div className="bg-white rounded-2xl rounded-bl-none px-5 py-4 shadow-sm border border-gray-200 flex items-center gap-2">
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+              </div>
+            </div>
+          )}
+          <div ref={messagesEndRef} />
+        </div>
+      </div>
+
+      {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print flex-none sticky bottom-0 z-10">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex gap-2 items-end">
+            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`} title={isListening ? 'Stop listening' : 'Click to speak'}>
+              {isListening ? (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+              ) : (
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+              )}
+            </button>
+            <div className="flex-1 relative">
+              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? "Listening..." : "Type your question or click the microphone to speak..."} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
+            </div>
+            <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none" title="Send message">
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            </button>
+          </div>
+          {isListening && (
+            <p className="text-sm text-red-600 mt-2 flex items-center gap-2 animate-pulse justify-center sm:justify-start">
+              <span className="w-2 h-2 bg-red-600 rounded-full"></span>
+              Listening... Speak your question now
+            </p>
+          )}
+          {isSpeaking && (
+            <div className="mt-2 flex items-center justify-between">
+              <p className="text-sm text-blue-600 flex items-center gap-2">
+                <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                Speaking response...
+              </p>
+              <button onClick={stopSpeaking} className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
+                Stop
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
 
       {/* Footer */}
       <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
