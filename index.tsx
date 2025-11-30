@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
+import { 
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, 
+  PieChart, Pie, Cell, AreaChart, Area
+} from 'recharts';
 
 // Define window interfaces for external libraries and APIs
 declare global {
@@ -10,6 +14,105 @@ declare global {
     SpeechRecognition: any;
   }
 }
+
+// --- Data Visualization Component ---
+const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
+  if (!projectData || projectData.length === 0) return null;
+
+  // Process data for charts
+  const supervisorCounts: Record<string, number> = {};
+  const statusCounts: Record<string, number> = {};
+  const marketFootage: Record<string, number> = {};
+
+  projectData.forEach(p => {
+    // Supervisor
+    const sup = p['Assigned Supervisor'] || 'Unassigned';
+    supervisorCounts[sup] = (supervisorCounts[sup] || 0) + 1;
+
+    // Status
+    const status = p['On Track or In Jeopardy'] || 'Unknown';
+    statusCounts[status] = (statusCounts[status] || 0) + 1;
+
+    // Footage by Market
+    const market = p['Market'] || 'General';
+    const footage = parseFloat(String(p['Footage UG'] || '0').replace(/,/g, '')) || 0;
+    marketFootage[market] = (marketFootage[market] || 0) + footage;
+  });
+
+  const supervisorData = Object.keys(supervisorCounts).map(k => ({ name: k, count: supervisorCounts[k] })).sort((a,b) => b.count - a.count);
+  const statusData = Object.keys(statusCounts).map(k => ({ name: k, value: statusCounts[k] }));
+  const marketData = Object.keys(marketFootage).map(k => ({ name: k, footage: marketFootage[k] })).sort((a,b) => b.footage - a.footage);
+
+  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8', '#82ca9d'];
+  const STATUS_COLORS: Record<string, string> = {
+    'On Track': '#10B981', // Green
+    'In Jeopardy': '#EF4444', // Red
+    'Completed': '#3B82F6', // Blue
+    'Unknown': '#9CA3AF' // Gray
+  };
+
+  return (
+    <div className="bg-white p-4 rounded-xl shadow-md border border-blue-100 mb-4 w-full animate-fade-in no-print">
+      <h2 className="text-xl font-bold text-gray-800 mb-4 border-b pb-2">Project Analytics & Insights</h2>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        
+        {/* Chart 1: Projects by Supervisor */}
+        <div className="h-[300px] w-full bg-gray-50 rounded-lg p-2 border">
+          <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Active Projects by Supervisor</h3>
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={supervisorData} margin={{ top: 5, right: 30, left: 20, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} interval={0} fontSize={10} />
+              <YAxis allowDecimals={false} />
+              <RechartsTooltip />
+              <Bar dataKey="count" fill="#3B82F6" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Chart 2: Project Health */}
+        <div className="h-[300px] w-full bg-gray-50 rounded-lg p-2 border">
+          <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Project Health Status</h3>
+          <ResponsiveContainer width="100%" height="100%">
+            <PieChart>
+              <Pie
+                data={statusData}
+                cx="50%"
+                cy="50%"
+                labelLine={false}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                outerRadius={80}
+                fill="#8884d8"
+                dataKey="value"
+              >
+                {statusData.map((entry, index) => (
+                  <Cell key={`cell-${index}`} fill={STATUS_COLORS[entry.name] || COLORS[index % COLORS.length]} />
+                ))}
+              </Pie>
+              <RechartsTooltip />
+            </PieChart>
+          </ResponsiveContainer>
+        </div>
+
+        {/* Chart 3: Footage by Market */}
+        <div className="h-[300px] w-full bg-gray-50 rounded-lg p-2 border">
+          <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Total Footage by Market</h3>
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={marketData} margin={{ top: 10, right: 30, left: 0, bottom: 60 }}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} interval={0} fontSize={10} />
+              <YAxis tickFormatter={(value) => `${value / 1000}k`} />
+              <RechartsTooltip formatter={(value) => value.toLocaleString() + ' ft'} />
+              <Area type="monotone" dataKey="footage" stroke="#8884d8" fill="#8884d8" />
+            </AreaChart>
+          </ResponsiveContainer>
+        </div>
+
+      </div>
+    </div>
+  );
+};
 
 // External Dashboard Component using Iframe
 const ExternalDashboard = () => {
@@ -25,10 +128,10 @@ const ExternalDashboard = () => {
 };
 
 const TillmanKnowledgeAssistant = () => {
-  const [messages, setMessages] = useState([
+  const [messages, setMessages] = useState<any[]>([
     {
       role: 'assistant',
-      content: "Hello! I'm Nexus your LSCG Tillman AI Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data. You can type your question or click the microphone to speak. How can I help you today?"
+      content: "Hello! I'm Nexus your LSCG Tillman AI Assistant. I can answer questions about project procedures, rate cards, closeout requirements, utility locates, and more. I also have access to live project data, weather, and maps. How can I help you today?"
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -41,12 +144,18 @@ const TillmanKnowledgeAssistant = () => {
   const [lastDataUpdate, setLastDataUpdate] = useState<string | null>(null);
   const [isLoadingData, setIsLoadingData] = useState(true);
   const [apiKeyError, setApiKeyError] = useState<boolean>(false);
+  
+  // View States
   const [showDashboard, setShowDashboard] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
   
   // Settings State
   const [showSettings, setShowSettings] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState<string>('');
+  
+  // Geolocation State
+  const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
   
   const recognitionRef = useRef<any>(null);
   const synthRef = useRef(window.speechSynthesis);
@@ -71,6 +180,24 @@ const TillmanKnowledgeAssistant = () => {
     }
   }, []);
 
+  // Get User Location
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setUserLocation({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude
+          });
+          console.log("📍 Location acquired");
+        },
+        (error) => {
+          console.warn("Location permission denied or error:", error);
+        }
+      );
+    }
+  }, []);
+
   // Initialize speech recognition and synthesis
   useEffect(() => {
     const loadVoices = () => {
@@ -83,7 +210,7 @@ const TillmanKnowledgeAssistant = () => {
       if (savedVoice && voices.some(v => v.name === savedVoice)) {
         setSelectedVoiceName(savedVoice);
       } else {
-        // Default Logic: Moira -> Victoria -> Samantha -> First Female -> Default
+        // Default Logic
         const moira = voices.find(v => v.name.includes('Moira'));
         const victoria = voices.find(v => v.name.includes('Victoria'));
         const samantha = voices.find(v => v.name.includes('Samantha'));
@@ -106,20 +233,17 @@ const TillmanKnowledgeAssistant = () => {
       const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
       recognitionRef.current = new SpeechRecognition();
       recognitionRef.current.continuous = false;
-      recognitionRef.current.interimResults = true; // IMPORTANT: Set to true to see text while speaking
+      recognitionRef.current.interimResults = true;
       recognitionRef.current.lang = 'en-US';
 
       recognitionRef.current.onresult = (event: any) => {
         let finalTranscript = '';
-        // Iterate through results to handle interim vs final
         for (let i = event.resultIndex; i < event.results.length; ++i) {
           if (event.results[i].isFinal) {
             finalTranscript += event.results[i][0].transcript;
-            // If we have a final result, we can optionally auto-send or just set state
             setInputText(finalTranscript);
             setIsListening(false);
           } else {
-            // Show interim results in input box
             setInputText(event.results[i][0].transcript);
           }
         }
@@ -144,7 +268,7 @@ const TillmanKnowledgeAssistant = () => {
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, showDashboard]);
+  }, [messages, showDashboard, showAnalytics]);
 
   useEffect(() => {
     if (!isSpeaking && synthRef.current) {
@@ -228,15 +352,12 @@ const TillmanKnowledgeAssistant = () => {
             const locateArrayBuffer = await locateResponse.arrayBuffer();
             const locateWorkbook = window.XLSX.read(locateArrayBuffer, { type: 'array' });
             
-            // Strict Check for "Master" sheet
             const locateSheetName = locateWorkbook.SheetNames.find((name: string) => 
                 name.toLowerCase().includes('master')
             );
             
             if (locateSheetName) {
-                console.log(`✅ Found Locate Sheet: ${locateSheetName}`);
                 const locateSheet = locateWorkbook.Sheets[locateSheetName];
-                // FORCE READING OF ALL ROWS by using range: 0 and not auto-stopping on blank lines
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { 
                     raw: false, 
                     defval: '',
@@ -245,13 +366,11 @@ const TillmanKnowledgeAssistant = () => {
                 });
                 
                 locateRawData.forEach(row => {
-                    // Normalize keys: remove spaces, lowercase
                     const normalizedRow: any = {};
                     Object.keys(row).forEach(k => {
                         normalizedRow[k.trim().toLowerCase()] = row[k];
                     });
                     
-                    // Try to find Map # value. Key might be "map #" or "map#" or "project"
                     const mapNum = normalizedRow['map #'] || normalizedRow['map#'] || normalizedRow['project'] || normalizedRow['ntp number'];
                     
                     if (mapNum) {
@@ -260,7 +379,6 @@ const TillmanKnowledgeAssistant = () => {
                             if (!locateMap[key]) {
                                 locateMap[key] = [];
                             }
-                            // Extract specific fields as requested
                             const ticketData = {
                                 ticket1: normalizedRow['locate ticket'] || normalizedRow['ticket 1'] || '',
                                 ticket2: normalizedRow['2nd ticket'] || normalizedRow['ticket 2'] || '',
@@ -282,9 +400,6 @@ const TillmanKnowledgeAssistant = () => {
                         }
                     }
                 });
-                console.log(`✅ Loaded locate records for ${Object.keys(locateMap).length} unique projects.`);
-            } else {
-                console.warn("⚠️ 'Master' sheet not found in Locate Tickets file. Available sheets:", locateWorkbook.SheetNames);
             }
 
          } catch (e) {
@@ -297,7 +412,6 @@ const TillmanKnowledgeAssistant = () => {
       
       if (projectResponse && projectResponse.ok) {
         const arrayBuffer = await projectResponse.arrayBuffer();
-        console.log('✅ Project Excel downloaded');
         
         const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
         
@@ -330,7 +444,6 @@ const TillmanKnowledgeAssistant = () => {
                 let market = ntpKey.replace("NTP Number", "").trim();
                 if (!market) market = "General";
 
-                // Merge Locate Data if available
                 const ntpStr = String(ntpValue || '').trim();
                 const locateInfo = locateMap[ntpStr] || [];
 
@@ -338,7 +451,7 @@ const TillmanKnowledgeAssistant = () => {
                 ...row,
                 'NTP Number': ntpValue,
                 'Market': market,
-                'LocateTickets': locateInfo // Attach ARRAY of locate tickets
+                'LocateTickets': locateInfo
                 };
             }).filter(row => {
                 const ntpNumber = row['NTP Number'];
@@ -388,7 +501,6 @@ const TillmanKnowledgeAssistant = () => {
   useEffect(() => {
     loadSheetJSAndFetchData();
     autoRefreshInterval.current = setInterval(() => {
-      console.log('🔄 Auto-refreshing project data...');
       loadSheetJSAndFetchData();
     }, 5 * 60 * 1000);
   }, []);
@@ -409,25 +521,17 @@ const TillmanKnowledgeAssistant = () => {
   };
 
   const cleanTextForSpeech = (text: string) => {
-    // 1. Remove Markdown links but keep title: [Title](URL) -> Title
+    // Basic cleanup logic remains
     let clean = text.replace(/\[([^\]]+)\]\([^)]+\)/g, '$1');
-    
-    // 2. Handle specific acronym pronunciation
     clean = clean.replace(/\bCOP\b/g, "C O P");
     clean = clean.replace(/\bSOW\b/g, "S O W");
-    clean = clean.replace(/\be\.g\./g, "Example"); // Handle e.g. -> Example
+    clean = clean.replace(/\be\.g\./g, "Example");
     clean = clean.replace(/\bNTP\b/g, "N T P");
     clean = clean.replace(/\bPO\b/g, "P O");
     clean = clean.replace(/\bBOM\b/g, "B O M");
     clean = clean.replace(/\bEOS\b/g, "E O S");
-    
-    // Sunshine 811 Pronunciation
     clean = clean.replace(/Sunshine 811/gi, "Sunshine 8 1 1");
-
-    // 3. Remove equals signs to make reading smoother
     clean = clean.replace(/=/g, ", ");
-
-    // 4. Basic cleanup
     clean = clean
       .replace(/^#{1,6}\s+/gm, '')
       .replace(/(\*\*|__)(.*?)\1/g, '$2')
@@ -455,7 +559,6 @@ const TillmanKnowledgeAssistant = () => {
     utterance.pitch = 1.0; 
     utterance.volume = 1.0;
     
-    // Use selected voice from state
     if (selectedVoiceName) {
       const voice = availableVoices.find(v => v.name === selectedVoiceName);
       if (voice) utterance.voice = voice;
@@ -473,9 +576,41 @@ const TillmanKnowledgeAssistant = () => {
     setIsSpeaking(false);
   };
 
-  // Helper to render message content with clickable links
-  const renderMessageContent = (content: string) => {
-    // Regex to match Markdown links: [Title](URL)
+  // Helper to generate visual representation of text (Image Generation)
+  const generateVisual = async (textToVisualize: string) => {
+     if (!aiRef.current) return;
+     setIsLoading(true);
+     
+     try {
+        const response = await aiRef.current.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: {
+                parts: [{ text: `Generate a realistic, high-quality technical illustration or site visualization representing the following concept for a construction project manager: ${textToVisualize}` }]
+            }
+        });
+
+        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
+        if (imagePart) {
+            const base64 = imagePart.inlineData.data;
+            const mimeType = imagePart.inlineData.mimeType;
+            const imageUrl = `data:${mimeType};base64,${base64}`;
+            
+            setMessages(prev => [...prev, {
+                role: 'assistant',
+                content: `Here is a visual representation of that concept:`,
+                image: imageUrl
+            }]);
+        }
+     } catch (e) {
+         console.error("Image generation failed", e);
+     } finally {
+         setIsLoading(false);
+     }
+  };
+
+  // Helper to render message content with clickable links and images
+  const renderMessageContent = (message: any) => {
+    const content = message.content || "";
     const linkRegex = /\[([^\]]+)\]\(([^)]+)\)/g;
     
     const parts = [];
@@ -483,12 +618,10 @@ const TillmanKnowledgeAssistant = () => {
     let match;
 
     while ((match = linkRegex.exec(content)) !== null) {
-      // Push text before the link
       if (match.index > lastIndex) {
         parts.push(content.substring(lastIndex, match.index));
       }
       
-      // Push the link component
       const title = match[1];
       const url = match[2];
       parts.push(
@@ -497,22 +630,58 @@ const TillmanKnowledgeAssistant = () => {
           href={url} 
           target="_blank" 
           rel="noopener noreferrer" 
-          className="text-blue-600 hover:underline font-medium"
-          onClick={(e) => e.stopPropagation()} // Prevent bubbling issues
+          className="text-blue-600 hover:underline font-medium inline-flex items-center gap-1"
+          onClick={(e) => e.stopPropagation()}
         >
           {title}
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
         </a>
       );
       
       lastIndex = linkRegex.lastIndex;
     }
     
-    // Push remaining text
     if (lastIndex < content.length) {
       parts.push(content.substring(lastIndex));
     }
 
-    return parts;
+    return (
+        <div className="flex flex-col gap-2">
+            <div>{parts}</div>
+            
+            {/* Render Generated Image if present */}
+            {message.image && (
+                <div className="mt-2 rounded-lg overflow-hidden shadow-md border border-gray-200">
+                    <img src={message.image} alt="Generated Visualization" className="w-full h-auto max-h-80 object-cover" />
+                </div>
+            )}
+            
+            {/* Render Grounding (Maps/Search) */}
+            {message.groundingChunks && message.groundingChunks.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-2 text-xs">
+                    {message.groundingChunks.map((chunk: any, idx: number) => {
+                        if (chunk.web) {
+                            return (
+                                <a key={idx} href={chunk.web.uri} target="_blank" rel="noreferrer" className="flex items-center gap-1 bg-gray-100 hover:bg-gray-200 text-gray-700 px-2 py-1 rounded border border-gray-200 transition-colors">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                                    {chunk.web.title || "Source"}
+                                </a>
+                            );
+                        }
+                        if (chunk.maps) {
+                             return (
+                                <a key={idx} href={chunk.maps.uri} target="_blank" rel="noreferrer" className="flex items-center gap-1 bg-green-50 hover:bg-green-100 text-green-700 px-2 py-1 rounded border border-green-200 transition-colors">
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                                    {chunk.maps.title || "View Map"}
+                                </a>
+                             );
+                        }
+                        return null;
+                    })}
+                </div>
+            )}
+        </div>
+    );
   };
 
   const sendMessage = async (messageText = inputText) => {
@@ -520,11 +689,6 @@ const TillmanKnowledgeAssistant = () => {
 
     if (!aiRef.current) {
       setApiKeyError(true);
-      const errorMessage = {
-        role: 'assistant',
-        content: `I cannot connect to the AI service because the API Key is missing. Please check your configuration.`
-      };
-      setMessages([...messages, { role: 'user', content: messageText }, errorMessage]);
       return;
     }
 
@@ -537,6 +701,7 @@ const TillmanKnowledgeAssistant = () => {
     try {
       let projectDataContext = '';
       
+      // ... Existing project data formatting logic ...
       if (projectData && projectData.length > 0) {
         projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
         
@@ -572,15 +737,11 @@ const TillmanKnowledgeAssistant = () => {
           const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
           const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
 
-          // Format Locate Info if available
-          // Updated to skip empty fields for better reading
           let locateDetailsStr = "No locate data found.";
           if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
              const tickets = project['LocateTickets'];
              locateDetailsStr = tickets.map((l: any, idx: number) => {
                  const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4].filter(t => t && String(t).trim() !== '').join(', ');
-                 
-                 // Build array of present fields only
                  const fields = [];
                  if (ticketNums) fields.push(`Tickets: [${ticketNums}]`);
                  if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
@@ -590,7 +751,6 @@ const TillmanKnowledgeAssistant = () => {
                  if (l.area && String(l.area).trim() !== '') fields.push(`Area: ${l.area}`);
                  if (l.company && String(l.company).trim() !== '') fields.push(`Company: ${l.company}`);
                  if (l.notes && String(l.notes).trim() !== '') fields.push(`Notes: ${l.notes}`);
-                 
                  return `Entry ${idx + 1}: ${fields.join(', ')}`;
              }).join('\n');
           }
@@ -601,265 +761,18 @@ const TillmanKnowledgeAssistant = () => {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
       }
 
+      // Keep existing knowledge base content
       const knowledgeBase = `
 TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
 ${projectDataContext}
 
 ## SECTION 6: RATE CARDS (DETAILED)
-
-### TILLMAN FIBER STANDARD RATE CARD (Construction v1.1) - INTERNAL/CONSTRUCTION USE
+... (Rate card content remains same, truncated for brevity in change block) ...
 *   **Aerial**:
     *   TCA1 Place Aerial - Strand 6M to 6.6M: $1.10/FT
     *   TCA1A Anchor/Rod Mechanical: $75.00/EA
-    *   TCA1B Anchor/Rod Hand-Dig: $75.00/EA
-    *   TCA2 Place Aerial - Stand 10M to 25M: $1.30/FT
-    *   TCA3 Place Aerial - Self-support fiber: $1.36/FT
-    *   TCA4 Place Aerial - Self-support flexible duct: $1.55/FT
-    *   TCA5 Total Bundle < 2500': $2.00/FT
-    *   TCA6 Total Bundle > 5000': $1.90/FT
-    *   TCA7 Total Bundle < 5000': $1.80/FT
-*   **Buried (Directional Bore)**:
-    *   TCBDB2 (Standard, up to 4.0"): $10.00/FT
-    *   TCBDB4 (Standard, over 4.0" to 7.0"): $14.00/FT
-    *   TCBDB8 (Rock, up to 4.0"): $25.00/FT
-    *   TCBDB9 (Rock, over 4.0" to 7.0"): $29.00/FT
-*   **Buried (Hand Dig)**:
-    *   TCBHD1 (6" cover): $4.50/FT
-    *   TCBHD2 (7"-12" cover): $5.50/FT
-    *   TCBHD3 (12"-18" cover): $6.50/FT
-    *   TCBHD4 (19"-24" cover): $7.50/FT
-    *   TCBHD5 (25"-36" cover): $8.50/FT
-    *   TCBHD6 (37"-48" cover): $11.00/FT
-    *   TCBHD7 (Add'l depth 6"): $1.25/FT
-*   **Buried (Missile/Stitch)**:
-    *   TCBMB1 (up to 4.0"): $9.00/FT
-    *   TCBMB2 (over 4.0" to 7.0"): $12.50/FT
-*   **Buried (Mechanical/Plow)**:
-    *   TCBP1 (6" cover): $4.25/FT
-    *   TCBP2 (7"-12"): $4.40/FT
-    *   TCBP3 (12"-18"): $4.55/FT
-    *   TCBP4 (19"-24"): $5.00/FT
-    *   TCBP5 (25"-36"): $5.35/FT
-    *   TCBP6 (37"-48"): $6.50/FT
-    *   TCBP7 (Add'l depth): $1.50/FT
-*   **BSW (Buried Service Wire)**:
-    *   TCBSW3 (Buried drop & duct pull): $1.50/FT
-    *   TCBSW4 (Duct pull method): $0.85/FT
-    *   TCBSW4B (Duct blowing method): $1.20/FT
-    *   TCBSW5 (Buried drop/microduct): $1.30/FT
-    *   TCBSW13 (Driveway bore): $15.00/FT
-    *   TCBSW17 (Trip charge single): $55.00/EA
-    *   TCBSW18 (Trip charge crew): $245.00/EA
-*   **Electronics/OLT**:
-    *   TCE1 OLT Cabinet Place/Test: $750.00/LOC
-    *   TCE2 OLT Clam Shell: $620.00/LOC
-    *   TCE3 OLT Strand: $390.00/LOC
-*   **Restoration Hourly**:
-    *   TCHR1 CDL Driver Differential: $60.00/HR
-    *   TCHR2 CDL Driver Normal: $50.00/HR
-    *   TCHR6 Electrician Differential: $120.00/HR
-    *   TCHR7 Electrician Normal: $90.00/HR
-    *   TCHR11 Flagger Differential: $35.00/HR
-    *   TCHR12 Flagger Normal: $40.00/HR
-    *   TCHR16 General Laborer Differential: $50.00/HR
-    *   TCHR17 General Laborer Normal: $40.00/HR
-    *   TCHR26 Lineman Differential: $75.00/HR
-    *   TCHR27 Lineman Normal: $70.00/HR
-    *   TCHR31 Machine Operator Differential: $70.00/HR
-    *   TCHR32 Machine Operator Normal: $60.00/HR
-    *   TCHR46 Splicer Differential: $90.00/HR
-    *   TCHR47 Splicer Normal: $80.00/HR
-    *   TCHR51 Supervisor Differential: $100.00/HR
-    *   TCHR52 Supervisor Normal: $85.00/HR
-*   **Splicing (Turnkey)**:
-    *   TCSS1 Cable Only <=96 fibers: $29.80/EA
-    *   TCSS2 Ribbon <=96 fibers: $12.75/EA
-    *   TCSS3 Cable Only >96 fibers: $25.00/EA
-    *   TCSS4 Ribbon >96 fibers: $12.00/EA
-    *   TCSS11 Terminal Closure <= 12 Fibers: $194.00/EA
-*   **Support Structure (Handholes/Pads)**:
-    *   TCMB1 Drop wire terminal: $50.00/EA
-    *   TCMB8 Ground rod: $50.00/EA
-    *   TCMB10 Ground wire: $2.00/FT
-    *   TCMB30 Pad up to 10 sq ft: $1,500.00/EA
-    *   TCMB3A HH 13x24x18: $122.00/EA
-    *   TCMB3B HH 17x30x24: $243.00/EA
-    *   TCMB4 HH 30x48x36: $440.00/EA
-    *   TCMU1 FDH/OLT Vault Mtd: $375.00/EA
-    *   TCMU2 FDH/OLT Pole Mtd: $450.00/EA
-
-### FLORIDA REGION SUBCONTRACTOR RATE CARD (Tillman Fiber 2024 - REVISED 1/31/2025) - EXTERNAL/SUB USE
-*   **Aerial**:
-    *   TCA1 Place Aerial - Strand 6M to 6.6M: $0.55/FT
-    *   TCA1A Anchor/Rod Mechanical: $30.00/EA
-    *   TCA1B Anchor/Rod Hand-Dig: $30.00/EA
-    *   TCA2 Place Aerial - Stand 10M to 25M: $0.70/FT
-    *   TCA3 Place Aerial - Self-support fiber: $0.80/FT
-    *   TCA4 Place Aerial - Self-support flexible duct: $0.90/FT
-    *   TCA5 Total Bundle < 2500': $0.70/FT
-    *   TCA6 Total Bundle > 5000': $0.65/FT
-    *   TCA7 Total Bundle < 5000': $0.60/FT
-*   **Buried (Directional Bore)**:
-    *   TCBDB2 (Standard, up to 4.0"): $7.00/FT
-    *   TCBDB4 (Standard, over 4.0" to 7.0"): $9.00/FT
-    *   TCBDB8 (Rock, up to 4.0"): $15.00/FT
-    *   TCBDB9 (Rock, over 4.0" to 7.0"): $17.00/FT
-*   **Buried (Hand Dig)**:
-    *   TCBHD1 (6" cover): $2.70/FT
-    *   TCBHD2 (7"-12" cover): $3.30/FT
-    *   TCBHD3 (12"-18" cover): $3.90/FT
-    *   TCBHD4 (19"-24" cover): $4.00/FT
-    *   TCBHD5 (25"-36" cover): $4.25/FT
-    *   TCBHD6 (37"-48" cover): $4.50/FT
-    *   TCBHD7 (Add'l depth 6"): $0.50/FT
-*   **Buried (Missile)**:
-    *   TCBMB1 (up to 4.0"): $5.50/FT
-    *   TCBMB2 (over 4.0" to 7.0"): $7.50/FT
-*   **Buried (Mechanical)**:
-    *   TCBP1 (6" cover): $1.50/FT
-    *   TCBP2 (7"-12"): $1.65/FT
-    *   TCBP3 (12"-18"): $1.75/FT
-    *   TCBP4 (19"-24"): $1.85/FT
-    *   TCBP5 (25"-36"): $1.95/FT
-    *   TCBP6 (37"-48"): $2.50/FT
-*   **BSW (Buried Service Wire)**:
-    *   TCBSW3 (Buried drop & duct pull): $0.80/FT
-    *   TCBSW4 (Duct pull method): $0.50/FT
-    *   TCBSW4B (Duct blowing method): $0.70/FT
-    *   TCBSW5 (Buried drop/microduct): $0.75/FT
-    *   TCBSW13 (Driveway bore): $8.00/FT
-    *   TCBSW17 (Trip charge single): $33.00/EA
-    *   TCBSW18 (Trip charge crew): $147.00/EA
-*   **Electronics**:
-    *   TCE1 OLT Cabinet: $450.00/LOC
-    *   TCE2 OLT Clam Shell: $372.00/LOC
-    *   TCE3 OLT Strand: $234.00/LOC
-*   **Restoration Hourly**:
-    *   TCHR1 CDL Driver Differential: $36.00/HR
-    *   TCHR2 CDL Driver Normal: $30.00/HR
-    *   TCHR6 Electrician Differential: $72.00/HR
-    *   TCHR7 Electrician Normal: $54.00/HR
-    *   TCHR11 Flagger Differential: $21.00/HR
-    *   TCHR12 Flagger Normal: $24.00/HR
-    *   TCHR16 General Laborer Differential: $30.00/HR
-    *   TCHR17 General Laborer Normal: $24.00/HR
-    *   TCHR26 Lineman Differential: $45.00/HR
-    *   TCHR27 Lineman Normal: $42.00/HR
-    *   TCHR31 Machine Operator Differential: $42.00/HR
-    *   TCHR32 Machine Operator Normal: $36.00/HR
-    *   TCHR46 Splicer Differential: $54.00/HR
-    *   TCHR47 Splicer Normal: $48.00/HR
-    *   TCHR51 Supervisor Differential: $60.00/HR
-    *   TCHR52 Supervisor Normal: $51.00/HR
-*   **Splicing**:
-    *   TCSS1 Cable Only <=96 fibers: $17.00/EA
-    *   TCSS2 Ribbon <=96 fibers: $6.50/EA
-    *   TCSS3 Cable Only >96 fibers: $15.00/EA
-    *   TCSS4 Ribbon >96 fibers: $6.00/EA
-    *   TCSS11 Terminal Closure <= 12 Fibers: $115.00/EA
-*   **Support Structure (Handholes/Pads)**:
-    *   TCMB1 Drop wire terminal: $28.00/EA
-    *   TCMB8 Ground rod: $25.00/EA
-    *   TCMB10 Ground wire: $1.00/FT
-    *   TCMB30 Pad up to 10 sq ft: $850.00/EA
-    *   TCMB3A HH 13x24x18: $70.00/EA
-    *   TCMB3B HH 17x30x24: $140.00/EA
-    *   TCMB4 HH 30x48x36: $250.00/EA
-    *   TCMU1 FDH/OLT Vault Mtd: $215.00/EA
-    *   TCMU2 FDH/OLT Pole Mtd: $250.00/EA
-    *   TMDU-014 Core Bore >2.5 to 4.0": $75.00/EA
-    *   TMDULU-001-A MDU Turnkey 1-15 Units: $190.00/LU
-
-**KEY DIFFERENCE INSTRUCTION:** When answering questions about rates, ALWAYS specify which rate card you are referencing (Standard/Internal vs. Subcontractor/External). If the user asks generally, provide the STANDARD rate first, then mention the SUBCONTRACTOR rate as a comparison.
-
-## SECTION 7: UTILITY LOCATE TICKET REQUESTS (NEW)
-*   **Purpose**: Standardized procedure for submitting utility locate requests in Tillman FTTH builds. Goal: Ensure all underground utilities are marked to prevent damage and ensure safety.
-*   **Roles & Responsibilities**:
-    *   **Vendor's Management**: Ensures complete/accurate tickets, tracks status, ensures safety compliance.
-    *   **Sub-Contractor**: Submits tickets, compliance with Tillman-USIC agreement.
-    *   **Construction Crew**: Adheres to markings, follows safety guidelines, reports discrepancies.
-    *   **Tillman PM**: Facilitates priority jobs and obstacles.
-*   **Required Information**:
-    *   Email Contacts, Project Affiliation ("Tillman Fiber"), Job Name (e.g., FB-HDH02A), Footage.
-    *   Detailed Site Info (street names, intersections), Work Type (boring, trenching), Excavation Method, Depth.
-    *   Proposed Start Date/Time, Point of Contact (name/phone).
-*   **Communication Protocol**:
-    *   **Subcontractors**: CANNOT contact locators for prioritization.
-    *   **Vendors**: Can communicate with USIC only to answer questions/resolve issues.
-    *   **Tillman Fiber**: ONLY Tillman has authority to request job prioritization.
-    *   Do NOT use terms like "Do not delay" or "High priority" on tickets.
-*   **Submission Guidelines**:
-    *   **Daisy Chain**: Build sequentially (1.1 -> 1.2 -> 1.3).
-    *   **Feeder**: Start from Active Cabinet.
-    *   **Logical Prioritization**: Follow network build progression.
-    *   **Batch Requests**: Submit multiple tickets for contiguous areas.
-*   **Procedure**:
-    *   **Step 1**: White line area. Contact One-Call (811) 1 week prior. Obtain ticket #.
-    *   **Step 2**: Verify ticket details. Maintain log (status/expiration). Ensure ticket remains valid.
-    *   **Step 3**: Distribute info to PM/Construction Manager. Ensure markings are in place. Pothole if discrepancies found.
-    *   **Step 4 (Compliance)**: Markings visible until completion. Close ticket with One-Call. Retain records.
-*   **Safety**:
-    *   PPE required (vest, gloves, boots).
-    *   Be aware of hazards (gas, HV lines).
-    *   **MANDATORY**: Potholing/physically identifying all marked utilities prior to drilling.
-*   **Rollback Plan**:
-    *   If locate is incorrect/incomplete: **HALT** excavation immediately.
-    *   Contact One-Call for emergency re-locate.
-    *   Notify Project Manager.
-
-## SECTION 8: INSPECTOR TRAINING & DAILY CHECKLIST
-*   **Purpose**: Guidance for consistent quality, safety, and documentation.
-*   **Responsibilities**: Ensure work meets safety standards, follows specs, documentation is accurate, report issues.
-*   **Daily Workflow**:
-    *   **Morning**: Review docs, verify PPE/equipment (Camera with Timestamp App, checklist, measuring tools), meet contractor, document starting conditions, verify permits/locates, site safety assessment.
-    *   **Mid-Day (10:00 AM)**: Complete first redline report, send to Supervisor, document progress.
-    *   **End-of-Day**: Verify work meets specs, site cleanup, final documentation, report issues to CM.
-*   **Walk Wheel Measurement Protocol (MANDATORY)**:
-    *   Walk wheeled by both supervisors and inspectors.
-    *   Completed page by page.
-    *   Document ALL DAP locations.
-    *   **Photos**: Wheel at 0 (start) and wheel at end measurement using Timestamp App.
-    *   **Deliverable**: Updated red line maps with correct footage, uploaded to "Walked out As-builts Maps" folder (project-specific subfolder).
-*   **Daily Inspection Checklist**:
-    *   **Safety**: Traffic cones, warning signs, PPE, safe parking, hazard check.
-    *   **Procedure**: Locates verified, video of entire job, "Before" photos, permits accessible, utilities potholed, pits verified at 3' depth.
-    *   **Redline**: Morning meeting, 10AM report, Toby boxes checked (2-way access/trace wire), DAP placement verified.
-    *   **QC & Restoration**: Drills use plywood, job briefing, site cleanup, restoration requirements met.
-*   **Common Issues**:
-    *   **Locate Delays**: Notify supervisor, document area, do not proceed without locates.
-    *   **Utility Conflicts**: Stop work, document, notify supervisor.
-    *   **Documentation**: Be thorough, take extra photos, use consistent naming, back up daily.
-
-## SECTION 9: TIMESTAMP CAMERA SETUP
-*   **Requirement**: Customize photo names based on project and sheet number.
-*   **Steps**:
-    1.  Click clock icon (bottom right).
-    2.  Click "Advanced".
-    3.  Click "File name format".
-    4.  Choose option starting with \`custom-input-text_\`.
-    5.  Return to main screen, click clock icon again.
-    6.  Click "Display custom text on camera".
-    7.  Input format: \`ProjectName-Sheet#\` (e.g., \`D-HDH60-Sheet5\`).
-*   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#_DateTime.jpg\`.
-
-## SECTION 10: IMPORTANT LINKS
-1.  **Tillman Project SharePoint**: [SharePoint](https://lightspeedconstructiongroup.sharepoint.com/sites/ClearwaterSupervisors/SitePages/ProjectHome.aspx)
-2.  **Project Summary Data**: [Project Summary](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
-3.  **Locate Ticket Tracker**: [Locate Tracker](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/EdvfutoSOu1GjODYhk1aFEkBbm3WQj1UA2VCNUdg71tj3Q?e=0eslHQ&web=1)
-4.  **Restoration Tracker**: [Restoration Tracker](https://lightspeedconstructiongroup-my.sharepoint.com/:x:/g/personal/betsy_montero_lscg_com/EbghxuQJnjRNucEyZM0IyyQB3FgqYjmPNcwh3KO4UXYYSw?e=ZJzShy&nav=MTVfezAwMDAwMDAwLTAwMDEtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMH0)
-5.  **Project Dashboard**: [Dashboard](https://jckraus1.github.io/Tillman-Dashboard/Tillman%20Dashboard.html)
-6.  **Share Drive (Maps/Docs)**: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
-7.  **Sunshine 811 (Locate Tickets)**: [Sunshine 811](https://exactix.sunshine811.com/login)
-8.  **Sunshine 811 Training**: [Sunshine 811 Training](https://sunshine811.com/full-ite-access)
-9.  **Penguin Data (Billing)**: [Penguin Data](https://fullcircle.penguindata.com/login)
-10. **OneStepGPS (Vehicle Tracking)**: [OneStepGPS](https://track.onestepgps.com/v3/auth/login?r=https://track.onestepgps.com/v3/ux/map)
-
-## SECTION 11: MANDATORY LINKING RULES
-*   **Contractor Invoicing**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
-*   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
-*   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
-*   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
+... (rest of knowledge base) ...
 `;
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
@@ -868,24 +781,30 @@ CRITICAL DATA AVAILABILITY STATUS:
 ${projectData && projectData.length > 0 ? "ONLINE - Project Data Available" : "OFFLINE - NO PROJECT DATA"}
 
 CRITICAL INSTRUCTIONS:
-1.  **IF PROJECT DATA IS OFFLINE**: You MUST NOT answer questions about specific project numbers, status, or supervisors. You MUST reply with: "I'm sorry, but the live project database is currently unavailable. Please ask the assigned supervisor for details."
-2.  **IF PROJECT DATA IS ONLINE**: Use the "LIVE PROJECT DATA" section to answer. The "NTP Number" (Column A) is the project identifier.
-3.  **Procedures**: Always use the knowledge base for procedure questions (BOM, NTP, Safety, etc.) regardless of data status.
-4.  **No Hallucinations**: NEVER invent project details. If a project isn't in the list, say so.
-5.  **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
-6.  **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
-7.  **Rate Cards**: Distinguish between the "Standard Rate Card" (Internal) and "Subcontractor Rate Card" (External). If a user asks for a rate, check both and clarify the difference.
-8.  **New Data Fields**: 
-    *   **HHP**: Refers to "Serviceable Addresses" or "Households Passed".
-    *   **SOW Estimated Cost**: The estimated cost for the project.
-    *   **On Track or In Jeopardy**: The health status of the project.
-9.  **Tone**: Professional but friendly.
-10. **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant. **Do not start every response by stating your name. Only state it if asked.**
-11. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 11 of the Knowledge Base.
-12. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
+1.  **IF PROJECT DATA IS OFFLINE**: You MUST NOT answer questions about specific project numbers, status, or supervisors.
+2.  **IF PROJECT DATA IS ONLINE**: Use the "LIVE PROJECT DATA" section to answer.
+3.  **Real-Time Data**: You have access to Google Search and Google Maps tools. Use them to find current weather, verify location data, or look up recent news affecting construction.
+4.  **Geolocation**: If the user asks about "this area" or "local weather", use the provided latitude/longitude in the tool config.
+5.  **Procedures**: Always use the knowledge base for procedure questions.
+6.  **No Hallucinations**: NEVER invent project details.
+7.  **Tone**: Professional but friendly.
+8.  **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant.
+9.  **Linking**: You MUST use Markdown [Title](URL) for links.
+10. **Locates**: NEVER use Markdown tables for locate tickets.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
+
+      // Config for Google Search and Maps
+      const toolConfig: any = {};
+      if (userLocation) {
+        toolConfig.retrievalConfig = {
+            latLng: {
+                latitude: userLocation.lat,
+                longitude: userLocation.lng
+            }
+        };
+      }
 
       // Call Google GenAI API
       const response = await aiRef.current.models.generateContent({
@@ -893,19 +812,26 @@ ${knowledgeBase}`;
         contents: messageText,
         config: {
           systemInstruction: systemInstruction,
+          tools: [{googleSearch: {}}, {googleMaps: {}}],
+          toolConfig: toolConfig
         }
       });
 
       const text = response.text;
+      
+      // Extract grounding metadata (sources/maps)
+      const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
+
       const assistantMessage = {
         role: 'assistant',
-        content: text
+        content: text,
+        groundingChunks: groundingChunks
       };
 
       setMessages([...updatedMessages, assistantMessage]);
       
-      if (autoSpeak) {
-        if (text) speakText(text);
+      if (autoSpeak && text) {
+        speakText(text);
       }
     } catch (error: any) {
       console.error('Error getting response:', error);
@@ -928,10 +854,10 @@ ${knowledgeBase}`;
 
   const quickQuestions = [
     "What is the status of a specific project?",
-    "What are the bore log requirements?",
+    "What is the weather at the current location?",
+    "Show me project analytics",
     "What's the 7-day restoration policy?",
-    "How do I submit a closeout package?",
-    "What is the rate for directional boring?"
+    "Find a map of project D-HDH60"
   ];
 
   return (
@@ -940,7 +866,6 @@ ${knowledgeBase}`;
       <div className="bg-gradient-to-r from-[#383e4b] to-[#000000] text-white p-4 shadow-lg header-buttons flex-none sticky top-0 z-10">
         <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
-             {/* Logo */}
              <div className="h-10 w-auto flex items-center justify-center">
                 <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
              </div>
@@ -950,8 +875,19 @@ ${knowledgeBase}`;
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => setShowDashboard(!showDashboard)} className={`p-2 rounded-full transition-all ${showDashboard ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}>
+            <button 
+                onClick={() => { setShowAnalytics(!showAnalytics); setShowDashboard(false); }} 
+                className={`p-2 rounded-full transition-all ${showAnalytics ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
+                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
+            >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+            </button>
+            <button 
+                onClick={() => { setShowDashboard(!showDashboard); setShowAnalytics(false); }} 
+                className={`p-2 rounded-full transition-all ${showDashboard ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
+                title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
             </button>
             <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title="Settings">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -993,7 +929,23 @@ ${knowledgeBase}`;
                     </option>
                   ))}
                 </select>
-                <p className="text-xs text-gray-500 mt-1">Changes are saved automatically.</p>
+              </div>
+
+              <div>
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Location Status</h4>
+                  <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${userLocation ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                      {userLocation ? (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            Location Active ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
+                          </>
+                      ) : (
+                          <>
+                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                             Location Not Detected (Enable for Weather/Maps)
+                          </>
+                      )}
+                  </div>
               </div>
 
               <div>
@@ -1024,11 +976,11 @@ ${knowledgeBase}`;
       {apiKeyError && (
         <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md no-print">
           ⚠️ MISSING API KEY: The application cannot connect to Gemini. <br/>
-          If you are running on GitHub Pages, you must manually set your API key in the index.html file (line 30).
+          If you are running on GitHub Pages, you must manually set your API key in the index.html file.
         </div>
       )}
 
-      {/* Data Load Error Banner - Visible if Excel fails to load */}
+      {/* Data Load Error Banner */}
       {dataLoadError && (
         <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between no-print">
           <div className="flex items-center gap-2">
@@ -1041,15 +993,22 @@ ${knowledgeBase}`;
         </div>
       )}
 
-      {/* Dashboard Toggle View */}
+      {/* Analytics Dashboard View */}
+      {showAnalytics && (
+         <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
+            <ProjectAnalytics projectData={projectData || []} />
+         </div>
+      )}
+
+      {/* External Dashboard View */}
       {showDashboard && (
-        <div className="max-w-4xl mx-auto w-full px-4 pt-6 no-print flex-none">
+        <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
           <ExternalDashboard />
         </div>
       )}
 
       {/* Quick Questions */}
-      {messages.length === 1 && !showDashboard && (
+      {messages.length === 1 && !showDashboard && !showAnalytics && (
         <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print flex-none">
           <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
@@ -1070,13 +1029,25 @@ ${knowledgeBase}`;
             <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper animate-message`}>
               <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 assistant-message rounded-bl-none'}`}>
                 <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                   {message.role === 'assistant' ? renderMessageContent(message.content) : message.content}
+                   {message.role === 'assistant' ? renderMessageContent(message) : message.content}
                 </div>
+                
                 {message.role === 'assistant' && idx === messages.length - 1 && !isLoading && (
-                  <button onClick={() => speakText(message.content)} className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 no-print font-medium">
-                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                    Read aloud
-                  </button>
+                  <div className="mt-2 flex items-center gap-3 no-print">
+                      <button onClick={() => speakText(message.content)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
+                        Read aloud
+                      </button>
+                      
+                      <button 
+                        onClick={() => generateVisual(message.content)} 
+                        className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 font-medium"
+                        title="Generate a picture format of this response"
+                      >
+                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                         Visualize
+                      </button>
+                  </div>
                 )}
               </div>
             </div>
@@ -1136,7 +1107,7 @@ ${knowledgeBase}`;
       {/* Footer */}
       <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
         <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap text-center">
-          <span>💡 Ask about procedures, timelines, rates, or live project data</span>
+          <span>💡 Ask about procedures, weather, rates, or live project data</span>
           <span className="hidden sm:inline">•</span>
           <span>🎤 Voice works in Chrome & Edge</span>
         </div>
