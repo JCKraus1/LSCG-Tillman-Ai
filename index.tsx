@@ -352,9 +352,15 @@ const TillmanKnowledgeAssistant = () => {
             const locateArrayBuffer = await locateResponse.arrayBuffer();
             const locateWorkbook = window.XLSX.read(locateArrayBuffer, { type: 'array' });
             
-            const locateSheetName = locateWorkbook.SheetNames.find((name: string) => 
+            // Try to find a sheet with "master" in name, otherwise default to first sheet
+            let locateSheetName = locateWorkbook.SheetNames.find((name: string) => 
                 name.toLowerCase().includes('master')
             );
+            
+            if (!locateSheetName && locateWorkbook.SheetNames.length > 0) {
+                 locateSheetName = locateWorkbook.SheetNames[0];
+                 console.log(`Locate "Master" sheet not found. Defaulting to: ${locateSheetName}`);
+            }
             
             if (locateSheetName) {
                 const locateSheet = locateWorkbook.Sheets[locateSheetName];
@@ -576,38 +582,6 @@ const TillmanKnowledgeAssistant = () => {
     setIsSpeaking(false);
   };
 
-  // Helper to generate visual representation of text (Image Generation)
-  const generateVisual = async (textToVisualize: string) => {
-     if (!aiRef.current) return;
-     setIsLoading(true);
-     
-     try {
-        const response = await aiRef.current.models.generateContent({
-            model: 'gemini-2.5-flash-image',
-            contents: {
-                parts: [{ text: `Generate a realistic, high-quality technical illustration or site visualization representing the following concept for a construction project manager: ${textToVisualize}` }]
-            }
-        });
-
-        const imagePart = response.candidates?.[0]?.content?.parts?.find((p: any) => p.inlineData);
-        if (imagePart) {
-            const base64 = imagePart.inlineData.data;
-            const mimeType = imagePart.inlineData.mimeType;
-            const imageUrl = `data:${mimeType};base64,${base64}`;
-            
-            setMessages(prev => [...prev, {
-                role: 'assistant',
-                content: `Here is a visual representation of that concept:`,
-                image: imageUrl
-            }]);
-        }
-     } catch (e) {
-         console.error("Image generation failed", e);
-     } finally {
-         setIsLoading(false);
-     }
-  };
-
   // Helper to render message content with clickable links and images
   const renderMessageContent = (message: any) => {
     const content = message.content || "";
@@ -648,13 +622,6 @@ const TillmanKnowledgeAssistant = () => {
     return (
         <div className="flex flex-col gap-2">
             <div>{parts}</div>
-            
-            {/* Render Generated Image if present */}
-            {message.image && (
-                <div className="mt-2 rounded-lg overflow-hidden shadow-md border border-gray-200">
-                    <img src={message.image} alt="Generated Visualization" className="w-full h-auto max-h-80 object-cover" />
-                </div>
-            )}
             
             {/* Render Grounding (Maps/Search) */}
             {message.groundingChunks && message.groundingChunks.length > 0 && (
@@ -768,11 +735,75 @@ TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 ${projectDataContext}
 
 ## SECTION 6: RATE CARDS (DETAILED)
-... (Rate card content remains same, truncated for brevity in change block) ...
 *   **Aerial**:
     *   TCA1 Place Aerial - Strand 6M to 6.6M: $1.10/FT
     *   TCA1A Anchor/Rod Mechanical: $75.00/EA
-... (rest of knowledge base) ...
+    *   TCA2 Place Aerial - Fiber 6M to 6.6M: $1.15/FT
+    *   TCA3 Delash/Relash: $1.00/FT
+    *   TCA4 Place Snow Shoe/Coil: $65.00/EA
+    *   TCA5 Riser Guard/U-Guard (Place or Repair): $55.00/EA
+    *   TCA6 Place Down Guy/Guy Guard: $50.00/EA
+    *   TCA7 Make Ready - Transfer: $150.00/EA
+    *   TCA8 Tree Trimming (Specifics Apply): $0.00/EA (Requires Approval)
+
+*   **Underground (UG)**:
+    *   TCU1 Place HDPE 1.25" (Directional Bore): $7.50/FT
+    *   TCU2 Place HDPE 1.25" (Plow): $4.00/FT
+    *   TCU3 Place HDPE 1.25" (Trench): $8.00/FT
+    *   TCU4 Place HDPE 2" (Directional Bore): $9.00/FT
+    *   TCU5 Place HDPE 2" (Plow): $5.00/FT
+    *   TCU6 Place HDPE 2" (Trench): $10.00/FT
+    *   TCU7 Place HDPE 4" (Directional Bore): $19.00/FT
+    *   TCU8 Vault Installation (24x36x24): $500.00/EA
+    *   TCU9 Vault Installation (30x48x36): $800.00/EA
+    *   TCU10 Vault Installation (48x48x48): $1,200.00/EA
+    *   TCU11 Pedestal Installation: $250.00/EA
+    *   TCU12 Ground Rod Installation: $50.00/EA
+    *   TCU13 Marker Post Installation: $45.00/EA
+    *   TCU14 Test Station Installation: $150.00/EA
+    *   TCU15 Place Tracer Wire: $0.25/FT
+    *   TCU16 Rock Adder (Bore): $15.00/FT
+    *   TCU17 Rock Adder (Trench): $25.00/FT
+    *   TCU18 Asphalt Restoration: $12.00/SQFT
+    *   TCU19 Concrete Restoration: $15.00/SQFT
+    *   TCU20 Sod Restoration: $1.50/SQFT
+
+*   **Splicing & Testing**:
+    *   TCS1 Loose Tube Prep: $45.00/EA
+    *   TCS2 Ribbon Prep: $85.00/EA
+    *   TCS3 Single Fusion Splice: $28.00/EA
+    *   TCS4 Ribbon Fusion Splice (12ct): $120.00/EA
+    *   TCS5 OTDR Test (Bi-Directional): $15.00/EA
+    *   TCS6 Power Meter Test: $5.00/EA
+    *   TCS7 Enclosure Audit/Troubleshoot: $150.00/HR
+    *   TCS8 Splitter Installation: $50.00/EA
+
+## SECTION 7: CLOSEOUT & INVOICING REQUIREMENTS
+*   **Photo Deliverables**:
+    *   Start of Day/End of Day Site Photos.
+    *   Depth Verification Photos (Tape measure in trench/bore pit).
+    *   Running Line Verification (Tracer wire/Locate paint visible).
+    *   Restoration Photos (Before/During/After).
+    *   Vault Interior Photos (Racking, Bonding, Cleanliness).
+    *   Pedestal/Cabinet Interior Photos.
+*   **Document Deliverables**:
+    *   Redline Drawings (As-Builts) - Must match actual footage.
+    *   Bore Logs (Drill shots).
+    *   Test Results (OTDR/Power Meter) - Raw & PDF formats.
+    *   Material Reconciliation Form.
+    *   Invoices must reference the specific NTP and PO numbers.
+
+## SECTION 8: UTILITY LOCATES & DAMAGE PREVENTION
+*   **811 Policy**: "Call Before You Dig" - Ticket must be active and valid.
+*   **Ticket Life**: Generally 30 days (state dependent). Renewal required if expired.
+*   **Tolerance Zone**: 24 inches (approx) from outer edge of utility markings. Hand dig only in this zone.
+*   **Positive Response**: Check 811 system for utility responses (Clear/Marked/Conflict) before digging.
+*   **Damages**: Stop work immediately. Secure the area. Notify Supervisor and Utility Owner. Take photos.
+
+## SECTION 9: SAFETY & COMPLIANCE
+*   **PPE**: Hard hat, safety vest (Class 2/3), steel-toe boots, safety glasses required at all times.
+*   **Traffic Control**: MUTCD standards must be followed for lane closures/shoulder work.
+*   **Tailgate Meetings**: Daily safety briefing required before work starts. Signed log needed.
 `;
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
@@ -1037,15 +1068,6 @@ ${knowledgeBase}`;
                       <button onClick={() => speakText(message.content)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
                         Read aloud
-                      </button>
-                      
-                      <button 
-                        onClick={() => generateVisual(message.content)} 
-                        className="text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 font-medium"
-                        title="Generate a picture format of this response"
-                      >
-                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                         Visualize
                       </button>
                   </div>
                 )}
