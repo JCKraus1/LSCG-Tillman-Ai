@@ -77,7 +77,7 @@ const TillmanKnowledgeAssistant = () => {
       const voices = synthRef.current.getVoices();
       setAvailableVoices(voices);
 
-      // Load preference from localStorage or use default logic
+      // Load preference from localStorage
       const savedVoice = localStorage.getItem('tillman_assistant_voice');
       
       if (savedVoice && voices.some(v => v.name === savedVoice)) {
@@ -202,11 +202,11 @@ const TillmanKnowledgeAssistant = () => {
       }
 
       const projectExcelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/tillman-project.xlsx';
+      // Updated URL for Locate Tickets
       const locateExcelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/locate-tickets.xlsx';
       
       console.log(`Fetching Excel files...`);
       
-      // Fetch both files
       const results = await Promise.allSettled([
         fetch(projectExcelUrl, { cache: 'no-cache' }),
         fetch(locateExcelUrl, { cache: 'no-cache' })
@@ -228,21 +228,29 @@ const TillmanKnowledgeAssistant = () => {
          try {
             const locateArrayBuffer = await locateResponse.arrayBuffer();
             const locateWorkbook = window.XLSX.read(locateArrayBuffer, { type: 'array' });
+            
+            // Strict Check for "Master" sheet
             const locateSheetName = locateWorkbook.SheetNames.find((name: string) => 
-                name.toLowerCase().includes('master') || name.toLowerCase().includes('table')
-            ) || locateWorkbook.SheetNames[0];
+                name.toLowerCase().includes('master')
+            );
             
-            const locateSheet = locateWorkbook.Sheets[locateSheetName];
-            const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { raw: false, defval: '' });
-            
-            locateRawData.forEach(row => {
-                const mapNum = row['Map #']; // Key mapping
-                if (mapNum) {
-                    const key = String(mapNum).trim();
-                    locateMap[key] = row;
-                }
-            });
-            console.log(`✅ Loaded ${Object.keys(locateMap).length} locate records.`);
+            if (locateSheetName) {
+                console.log(`✅ Found Locate Sheet: ${locateSheetName}`);
+                const locateSheet = locateWorkbook.Sheets[locateSheetName];
+                const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { raw: false, defval: '' });
+                
+                locateRawData.forEach(row => {
+                    const mapNum = row['Map #']; // Key mapping
+                    if (mapNum) {
+                        const key = String(mapNum).trim();
+                        locateMap[key] = row;
+                    }
+                });
+                console.log(`✅ Loaded ${Object.keys(locateMap).length} locate records.`);
+            } else {
+                console.warn("⚠️ 'Master' sheet not found in Locate Tickets file. Available sheets:", locateWorkbook.SheetNames);
+            }
+
          } catch (e) {
              console.error("Error parsing locate tickets:", e);
          }
@@ -529,7 +537,7 @@ const TillmanKnowledgeAssistant = () => {
               locateDetails = `Tickets: ${[l['Locate ticket'], l['2nd ticket'], l['3rd ticket'], l['4th ticket']].filter(Boolean).join(', ')} | Phone: ${l['Locate Number']} | Status: ${l['TICKET STATUS']} | Due: ${l['DUE DATE']} | Expires: ${l['EXPIRE DATE']}`;
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Locates: { ${locateDetails} }`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Locates: { ${locateDetails} }`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
