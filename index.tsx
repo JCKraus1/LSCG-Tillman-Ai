@@ -1,7 +1,4 @@
-<change>
-<file>index.tsx</file>
-<description>Clean index.tsx to ensure valid syntax and correct logic for data fetching and dashboard.</description>
-<content><![CDATA[import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { createRoot } from "react-dom/client";
 import { GoogleGenAI } from "@google/genai";
 
@@ -80,7 +77,7 @@ const TillmanKnowledgeAssistant = () => {
       const voices = synthRef.current.getVoices();
       setAvailableVoices(voices);
 
-      // Load preference from localStorage
+      // Load preference from localStorage or use default logic
       const savedVoice = localStorage.getItem('tillman_assistant_voice');
       
       if (savedVoice && voices.some(v => v.name === savedVoice)) {
