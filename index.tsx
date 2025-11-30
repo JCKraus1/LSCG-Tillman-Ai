@@ -240,7 +240,8 @@ const TillmanKnowledgeAssistant = () => {
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { 
                     raw: false, 
                     defval: '',
-                    blankrows: false 
+                    blankrows: false,
+                    range: 0 // Force read from A1
                 });
                 
                 locateRawData.forEach(row => {
@@ -855,6 +856,7 @@ ${knowledgeBase}`;
         }
       });
 
+      // Correctly access text as a property, NOT a function call
       const text = response.text;
       const assistantMessage = {
         role: 'assistant',
@@ -925,6 +927,147 @@ ${knowledgeBase}`;
           </div>
         </div>
       </div>
+
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-hidden relative flex flex-col">
+        {showDashboard && (
+             <div className="p-4 bg-gray-100/10 backdrop-blur-md">
+                <ExternalDashboard />
+             </div>
+        )}
+        
+        {/* Chat Messages */}
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 scroll-smooth">
+           {messages.map((msg, index) => (
+             <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+               <div className={`max-w-[85%] rounded-2xl p-4 shadow-md ${
+                 msg.role === 'user' 
+                   ? 'bg-blue-600 text-white rounded-br-none' 
+                   : 'bg-white text-gray-800 rounded-bl-none border border-gray-200'
+               }`}>
+                 {/* Content rendering with links */}
+                 <div className="markdown-body text-sm leading-relaxed whitespace-pre-wrap">
+                   {renderMessageContent(msg.content)}
+                 </div>
+               </div>
+             </div>
+           ))}
+           <div ref={messagesEndRef} />
+           {isLoading && (
+              <div className="flex justify-start animate-pulse">
+                <div className="bg-white/80 rounded-2xl p-4 rounded-bl-none shadow-sm flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0ms'}}></div>
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '150ms'}}></div>
+                  <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '300ms'}}></div>
+                </div>
+              </div>
+           )}
+        </div>
+
+        {/* Input Area */}
+        <div className="p-4 bg-black/20 backdrop-blur-md border-t border-white/10">
+           {/* Quick Questions */}
+           <div className="flex gap-2 overflow-x-auto pb-3 mb-2 scrollbar-hide">
+              {quickQuestions.map((q, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => sendMessage(q)}
+                  className="whitespace-nowrap px-3 py-1.5 bg-white/10 hover:bg-white/20 text-white text-xs rounded-full border border-white/10 transition-colors"
+                >
+                  {q}
+                </button>
+              ))}
+           </div>
+
+           <div className="relative flex items-center gap-2 max-w-4xl mx-auto">
+              <button 
+                onClick={toggleListening}
+                className={`p-3 rounded-full transition-all flex-none ${
+                  isListening 
+                    ? 'bg-red-500 hover:bg-red-600 text-white animate-pulse shadow-[0_0_15px_rgba(239,68,68,0.5)]' 
+                    : 'bg-white/10 hover:bg-white/20 text-white border border-white/10'
+                }`}
+                title="Voice Input"
+              >
+                {/* Mic Icon */}
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+              </button>
+              
+              <div className="flex-1 relative">
+                <textarea
+                  value={inputText}
+                  onChange={(e) => setInputText(e.target.value)}
+                  onKeyDown={handleKeyPress}
+                  placeholder="Ask about Tillman projects, procedures, or rates..."
+                  className="w-full bg-white/10 border border-white/10 text-white placeholder-gray-400 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white/20 resize-none h-[52px] scrollbar-hide"
+                  rows={1}
+                />
+                <button
+                  onClick={() => sendMessage()}
+                  disabled={isLoading || !inputText.trim()}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-blue-400 hover:text-blue-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+                </button>
+              </div>
+           </div>
+           
+           <div className="text-center mt-2">
+              <p className="text-[10px] text-gray-400">
+                {isLoadingData ? "🔄 Updating project data..." : `Last updated: ${lastDataUpdate || 'Never'}`}
+                {dataLoadError && <span className="text-red-400 ml-2">⚠️ Data Error</span>}
+                {apiKeyError && <span className="text-red-400 ml-2">⚠️ API Key Missing</span>}
+              </p>
+           </div>
+        </div>
+      </div>
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setShowSettings(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="p-4 border-b border-gray-100 flex justify-between items-center bg-gray-50">
+              <h3 className="font-bold text-gray-800">Assistant Settings</h3>
+              <button onClick={() => setShowSettings(false)} className="text-gray-400 hover:text-gray-600">
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Voice Selection</label>
+                <select 
+                  value={selectedVoiceName} 
+                  onChange={handleVoiceChange}
+                  className="w-full p-2 border border-gray-300 rounded-lg text-sm"
+                >
+                  {availableVoices.map(voice => (
+                    <option key={voice.name} value={voice.name}>
+                      {voice.name} ({voice.lang})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              
+              <div className="pt-4 border-t border-gray-100 flex gap-2">
+                <button 
+                  onClick={handleDownloadChat}
+                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                  Download Chat
+                </button>
+                <button 
+                  onClick={handlePrintChat}
+                  className="flex-1 py-2 px-4 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
+                  Print Chat
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Footer */}
       <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
