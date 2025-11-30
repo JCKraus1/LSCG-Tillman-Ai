@@ -228,7 +228,7 @@ const TillmanKnowledgeAssistant = () => {
             const locateArrayBuffer = await locateResponse.arrayBuffer();
             const locateWorkbook = window.XLSX.read(locateArrayBuffer, { type: 'array' });
             
-            // Strict Check for "Master" sheet
+            // Strict Check for "Master" sheet (case insensitive)
             const locateSheetName = locateWorkbook.SheetNames.find((name: string) => 
                 name.toLowerCase().includes('master')
             );
@@ -240,18 +240,20 @@ const TillmanKnowledgeAssistant = () => {
                 
                 locateRawData.forEach(row => {
                     // Normalize keys: remove spaces, lowercase
-                    // We look for the key that contains "Map #"
                     const normalizedRow: any = {};
                     Object.keys(row).forEach(k => {
                         normalizedRow[k.trim().toLowerCase()] = row[k];
                     });
                     
-                    // Try to find Map # value. Key might be "map #" or "map#"
+                    // Try to find Map # value. Key might be "map #" or "map#" or "project"
                     const mapNum = normalizedRow['map #'] || normalizedRow['map#'] || normalizedRow['project'] || normalizedRow['ntp number'];
                     
                     if (mapNum) {
                         const key = String(mapNum).trim();
-                        locateMap[key] = row; // Store original row
+                        // Check if key looks like a valid project ID (optional validation)
+                        if (key.length > 2) {
+                            locateMap[key] = row; // Store original row
+                        }
                     }
                 });
                 console.log(`✅ Loaded ${Object.keys(locateMap).length} locate records.`);
@@ -392,6 +394,9 @@ const TillmanKnowledgeAssistant = () => {
     clean = clean.replace(/\bPO\b/g, "P O");
     clean = clean.replace(/\bBOM\b/g, "B O M");
     clean = clean.replace(/\bEOS\b/g, "E O S");
+    
+    // Sunshine 811 Pronunciation
+    clean = clean.replace(/Sunshine 811/gi, "Sunshine 8 1 1");
 
     // 3. Basic cleanup
     clean = clean
@@ -545,7 +550,7 @@ const TillmanKnowledgeAssistant = () => {
               locateDetails = `Tickets: ${[l['Locate ticket'], l['2nd ticket'], l['3rd ticket'], l['4th ticket']].filter(Boolean).join(', ')} | Phone: ${l['Locate Number']} | Status: ${l['TICKET STATUS']} | Due: ${l['DUE DATE']} | Expires: ${l['EXPIRE DATE']}`;
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Locates: { ${locateDetails} }`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Info: ${locateDetails}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
@@ -832,7 +837,7 @@ CRITICAL INSTRUCTIONS:
 9.  **Tone**: Professional but friendly.
 10. **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant. **Do not start every response by stating your name. Only state it if asked.**
 11. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 11 of the Knowledge Base.
-12. **Locate Tables**: When answering questions about locate tickets, format the response as a Markdown table.
+12. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
