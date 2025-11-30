@@ -77,7 +77,7 @@ const TillmanKnowledgeAssistant = () => {
       const voices = synthRef.current.getVoices();
       setAvailableVoices(voices);
 
-      // Load preference from localStorage
+      // Load preference from localStorage or use default logic
       const savedVoice = localStorage.getItem('tillman_assistant_voice');
       
       if (savedVoice && voices.some(v => v.name === savedVoice)) {
@@ -183,9 +183,6 @@ const TillmanKnowledgeAssistant = () => {
     window.print();
   };
 
-  // Helper to normalize keys for flexible matching
-  const normalizeKey = (key: string) => key.toLowerCase().replace(/[^a-z0-9]/g, '');
-
   // Load project data from Excel
   const loadSheetJSAndFetchData = async () => {
     setIsLoadingData(true);
@@ -225,9 +222,7 @@ const TillmanKnowledgeAssistant = () => {
       else console.warn("Failed to fetch Locate Excel:", results[1].reason);
 
       // --- PARSE LOCATE TICKETS ---
-      // Using a Map where Key = Map # (Project ID), Value = Array of Ticket Objects
-      const locateMap: Record<string, any[]> = {};
-      
+      const locateMap: Record<string, any> = {};
       if (locateResponse && locateResponse.ok) {
          try {
             const locateArrayBuffer = await locateResponse.arrayBuffer();
@@ -241,7 +236,7 @@ const TillmanKnowledgeAssistant = () => {
             if (locateSheetName) {
                 console.log(`✅ Found Locate Sheet: ${locateSheetName}`);
                 const locateSheet = locateWorkbook.Sheets[locateSheetName];
-                // FORCE READING OF ALL ROWS
+                // FORCE READING OF ALL ROWS by not relying on auto-detection
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { 
                     raw: false, 
                     defval: '',
@@ -250,19 +245,18 @@ const TillmanKnowledgeAssistant = () => {
                 });
                 
                 locateRawData.forEach(row => {
-                    // Flexible key matching for "Map #"
-                    let mapNum = row['Map #'] || row['Map#'] || row['map #'] || row['map#'] || row['Project'] || row['NTP Number'];
+                    // Normalize keys: remove spaces, lowercase
+                    const normalizedRow: any = {};
+                    Object.keys(row).forEach(k => {
+                        normalizedRow[k.trim().toLowerCase()] = row[k];
+                    });
                     
-                    // Check common alternative keys if direct access fails (due to spaces etc)
-                    if (!mapNum) {
-                       const keys = Object.keys(row);
-                       const mapKey = keys.find(k => normalizeKey(k) === 'map' || normalizeKey(k).includes('map#'));
-                       if (mapKey) mapNum = row[mapKey];
-                    }
-
+                    // Try to find Map # value. Key might be "map #" or "map#" or "project"
+                    const mapNum = normalizedRow['map #'] || normalizedRow['map#'] || normalizedRow['project'] || normalizedRow['ntp number'];
+                    
                     if (mapNum) {
                         const key = String(mapNum).trim();
-                        if (key.length > 2) { // Basic validation to ignore empty/garbage rows
+                        if (key.length > 2) {
                             if (!locateMap[key]) {
                                 locateMap[key] = [];
                             }
@@ -283,7 +277,6 @@ const TillmanKnowledgeAssistant = () => {
                                 completed: row['DATE TICKET COMPLETED'] || '',
                                 footage: row['FOOTAGE'] || '',
                                 notes: row['NOTES'] || '',
-                                fullRow: row // Keep full row just in case
                             };
                             locateMap[key].push(ticketData);
                         }
@@ -337,7 +330,7 @@ const TillmanKnowledgeAssistant = () => {
                 let market = ntpKey.replace("NTP Number", "").trim();
                 if (!market) market = "General";
 
-                // Merge Locate Data (Array of tickets)
+                // Merge Locate Data if available
                 const ntpStr = String(ntpValue || '').trim();
                 const locateInfo = locateMap[ntpStr] || [];
 
@@ -431,7 +424,10 @@ const TillmanKnowledgeAssistant = () => {
     // Sunshine 811 Pronunciation
     clean = clean.replace(/Sunshine 811/gi, "Sunshine 8 1 1");
 
-    // 3. Basic cleanup
+    // 3. Remove equals signs to make reading smoother
+    clean = clean.replace(/=/g, ", ");
+
+    // 4. Basic cleanup
     clean = clean
       .replace(/^#{1,6}\s+/gm, '')
       .replace(/(\*\*|__)(.*?)\1/g, '$2')
@@ -577,17 +573,18 @@ const TillmanKnowledgeAssistant = () => {
           const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
 
           // Format Locate Info if available (Array of tickets)
+          // Construction detailed readable string for the AI
           let locateDetailsStr = "No locate data found.";
           if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
              const tickets = project['LocateTickets'];
              locateDetailsStr = tickets.map((l: any, idx: number) => {
-                 // Format each ticket entry
+                 // Combine all ticket numbers found
                  const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4].filter(t => t && t.trim() !== '').join(', ');
-                 return `Entry ${idx + 1}: Tickets=[${ticketNums}] Phone=${l.phone} Status=${l.status} Due=${l.dueDate} Exp=${l.expireDate} Area=${l.area} Co=${l.company} Notes=${l.notes}`;
-             }).join('; ');
+                 return `Entry ${idx + 1}: Tickets [${ticketNums}], Phone ${l.phone}, Status ${l.status}, Due ${l.dueDate}, Expires ${l.expireDate}, Area ${l.area}, Company ${l.company}, Notes ${l.notes}`;
+             }).join('\n');
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets: ${locateDetailsStr}`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
