@@ -328,7 +328,7 @@ const TillmanKnowledgeAssistant = () => {
       const projectExcelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/tillman-project.xlsx';
       const locateExcelUrl = 'https://jckraus1.github.io/Tillman-Dashboard/locate-tickets.xlsx';
       
-      console.log(`Fetching Excel files...`);
+      console.log(`🔄 Fetching Excel files...`);
       
       const results = await Promise.allSettled([
         fetch(projectExcelUrl, { cache: 'no-cache' }),
@@ -352,6 +352,9 @@ const TillmanKnowledgeAssistant = () => {
             const locateArrayBuffer = await locateResponse.arrayBuffer();
             const locateWorkbook = window.XLSX.read(locateArrayBuffer, { type: 'array' });
             
+            console.log("📂 [LOCATE EXCEL] Workbook Loaded");
+            console.log("📑 [LOCATE EXCEL] Available Sheets:", locateWorkbook.SheetNames);
+
             // Try to find a sheet with "master" in name, otherwise default to first sheet
             let locateSheetName = locateWorkbook.SheetNames.find((name: string) => 
                 name.toLowerCase().includes('master')
@@ -359,7 +362,7 @@ const TillmanKnowledgeAssistant = () => {
             
             if (!locateSheetName && locateWorkbook.SheetNames.length > 0) {
                  locateSheetName = locateWorkbook.SheetNames[0];
-                 console.log(`Locate "Master" sheet not found. Defaulting to: ${locateSheetName}`);
+                 console.warn(`⚠️ [LOCATE EXCEL] "Master" sheet not found. Defaulting to first sheet: "${locateSheetName}"`);
             }
             
             if (locateSheetName) {
@@ -367,11 +370,13 @@ const TillmanKnowledgeAssistant = () => {
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { 
                     raw: false, 
                     defval: '',
-                    blankrows: false,
-                    range: 0 
+                    blankrows: false 
                 });
                 
-                locateRawData.forEach(row => {
+                console.log(`📊 [LOCATE EXCEL] Processing Sheet: "${locateSheetName}" | Total Rows Found: ${locateRawData.length}`);
+
+                let mappedCount = 0;
+                locateRawData.forEach((row, index) => {
                     const normalizedRow: any = {};
                     Object.keys(row).forEach(k => {
                         normalizedRow[k.trim().toLowerCase()] = row[k];
@@ -391,6 +396,7 @@ const TillmanKnowledgeAssistant = () => {
                             if (!locateMap[key]) {
                                 locateMap[key] = [];
                             }
+                            mappedCount++;
                             
                             // Robust Ticket Number Finding
                             // Check various common header formats including user specified "1st ticket" etc.
@@ -420,11 +426,14 @@ const TillmanKnowledgeAssistant = () => {
                         }
                     }
                 });
+                console.log(`✅ [LOCATE EXCEL] Successfully mapped ${mappedCount} locate entries to Project IDs.`);
             }
 
          } catch (e) {
-             console.error("Error parsing locate tickets:", e);
+             console.error("❌ [LOCATE EXCEL] Error parsing locate tickets:", e);
          }
+      } else {
+        console.warn("❌ [LOCATE EXCEL] Failed to download locate-tickets.xlsx");
       }
 
       // --- PARSE PROJECT DATA ---
@@ -434,6 +443,8 @@ const TillmanKnowledgeAssistant = () => {
         const arrayBuffer = await projectResponse.arrayBuffer();
         
         const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
+        console.log("📂 [PROJECT EXCEL] Workbook Loaded");
+        console.log("📑 [PROJECT EXCEL] Available Sheets:", workbook.SheetNames);
         
         const targetSheets = [
             "Tillman UG Footage",
@@ -456,6 +467,8 @@ const TillmanKnowledgeAssistant = () => {
                 raw: false,
                 defval: ''
             });
+            
+            console.log(`🔹 [PROJECT EXCEL] Reading Sheet "${sheetName}" | Rows: ${sheetData.length}`);
             
             const validRows = sheetData.map(row => {
                 const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
@@ -492,7 +505,12 @@ const TillmanKnowledgeAssistant = () => {
             
             if (validRows.length > 0) {
                 allData = allData.concat(validRows);
+                console.log(`   -> Added ${validRows.length} valid projects from "${sheetName}"`);
+            } else {
+                console.log(`   -> No valid project rows found in "${sheetName}"`);
             }
+            } else {
+                console.warn(`⚠️ [PROJECT EXCEL] Target sheet "${sheetName}" NOT found.`);
             }
         });
       } else {
@@ -507,7 +525,7 @@ const TillmanKnowledgeAssistant = () => {
       setLastDataUpdate(new Date().toLocaleString());
       setIsLoadingData(false);
       setDataLoadError(null);
-      console.log('✅ Project data loaded successfully:', allData.length, 'rows');
+      console.log('✅ [COMPLETE] Project data loaded successfully:', allData.length, 'total active projects');
       
     } catch (error: any) {
       console.error('❌ Error loading project data:', error);
