@@ -33,9 +33,14 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
     const status = p['On Track or In Jeopardy'] || 'Unknown';
     statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-    // Footage by Market
+    // Footage by Market - Updated to prefer Footage Remaining as per user request
     const market = p['Market'] || 'General';
-    const footage = parseFloat(String(p['Footage UG'] || '0').replace(/,/g, '')) || 0;
+    // Check for Footage Remaining first, fallback to Footage UG
+    let rawFootage = p['Footage Remaining'];
+    if (rawFootage === undefined || rawFootage === null || String(rawFootage).trim() === '') {
+        rawFootage = p['Footage UG'];
+    }
+    const footage = parseFloat(String(rawFootage || '0').replace(/,/g, '')) || 0;
     marketFootage[market] = (marketFootage[market] || 0) + footage;
   });
 
@@ -419,6 +424,9 @@ const TillmanKnowledgeAssistant = () => {
                                 k === 'ticket' || 
                                 k === 'ticket #' || 
                                 k === 'ticket number' || 
+                                k === 'ticket no' || 
+                                k === 'ticket id' || 
+                                k === 'tic' || 
                                 k.includes('1st') || 
                                 k.includes('ticket 1')
                             );
@@ -460,7 +468,7 @@ const TillmanKnowledgeAssistant = () => {
                                 escalated: normalizedRow['date escalated'] || '',
                                 status: normalizedRow['ticket status'] || normalizedRow['status'] || '',
                                 completed: normalizedRow['date ticket completed'] || normalizedRow['date completed'] || '',
-                                footage: normalizedRow['footage'] || '',
+                                footage: normalizedRow['footage'] || '', // We parse it but will not display it in AI context
                                 notes: normalizedRow['notes'] || normalizedRow['comments'] || '',
                             };
                             locateMap[key].push(ticketData);
@@ -514,6 +522,10 @@ const TillmanKnowledgeAssistant = () => {
             const validRows = sheetData.map(row => {
                 const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
                 const ntpValue = row[ntpKey];
+
+                // Find Footage Remaining specifically (Case insensitive search)
+                const footageRemKey = Object.keys(row).find(key => key.toLowerCase().includes("footage remaining")) || 'Footage Remaining';
+                const footageRemValue = row[footageRemKey];
                 
                 let market = ntpKey.replace("NTP Number", "").trim();
                 if (!market) market = "General";
@@ -525,7 +537,8 @@ const TillmanKnowledgeAssistant = () => {
                 ...row,
                 'NTP Number': ntpValue,
                 'Market': market,
-                'LocateTickets': locateInfo
+                'LocateTickets': locateInfo,
+                'Footage Remaining': footageRemValue // Store explicit Footage Remaining column
                 };
             }).filter(row => {
                 const ntpNumber = row['NTP Number'];
@@ -756,8 +769,13 @@ const TillmanKnowledgeAssistant = () => {
 
         Object.keys(supervisorGroups).sort().forEach(supervisor => {
           const projects = supervisorGroups[supervisor];
+          // Calculate Total Footage using 'Footage Remaining' preferred
           const totalFootage = projects.reduce((sum: number, p: any) => {
-            const footage = parseFloat(String(p['Footage UG'] || '0').replace(/,/g, '')) || 0;
+            let val = p['Footage Remaining'];
+            if (val === undefined || val === null || String(val).trim() === '') {
+                val = p['Footage UG'];
+            }
+            const footage = parseFloat(String(val || '0').replace(/,/g, '')) || 0;
             return sum + footage;
           }, 0);
           
@@ -776,6 +794,9 @@ const TillmanKnowledgeAssistant = () => {
           const hhp = project['HHP'] || project['hhp'] || 'N/A';
           const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
           const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
+          
+          // Footage Logic for specific project details
+          const footageRemaining = project['Footage Remaining'] !== undefined ? project['Footage Remaining'] : project['Footage UG'];
 
           let locateDetailsStr = "No locate data found.";
           if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
@@ -797,7 +818,7 @@ const TillmanKnowledgeAssistant = () => {
              }).join('\n');
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage Remaining: ${footageRemaining} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
@@ -1011,14 +1032,14 @@ ${projectDataContext}
     *   TCMB27 Place Buried - power meter base: $124.00/EA
     *   TCMB28 Place Buried - alpha power cabinet: $324.00/EA
     *   TCMB29 Place Buried – OLT cabinet: $400.00/EA
-    *   TCMB30 Place Buried - equipment and pad up to 10 sq. ft.: $1,500.00/EA
-    *   TCMB31 Place Buried - equipment and pad over 10 to 30 sq. ft.: $1,800.00/EA
-    *   TCMB32 Place Buried - equipment and pad over 30 to 50 sq. ft.: $2,800.00/EA
-    *   TCMB33 Place Buried - equipment and pad over 50 to 100 sq. ft.: $3,500.00/EA
-    *   TCMB34 Place Buried - concrete pad up to 10 sq. ft.: $400.00/EA
-    *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft.: $850.00/EA
-    *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft.: $1,500.00/EA
-    *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft.: $2,000.00/EA
+    *   TCMB30 Place Buried - equipment and pad up to 10 sq. ft. (Per EA): $1,500.00/EA
+    *   TCMB31 Place Buried - equipment and pad over 10 to 30 sq. ft. (Per EA): $1,800.00/EA
+    *   TCMB32 Place Buried - equipment and pad over 30 to 50 sq. ft. (Per EA): $2,800.00/EA
+    *   TCMB33 Place Buried - equipment and pad over 50 to 100 sq. ft. (Per EA): $3,500.00/EA
+    *   TCMB34 Place Buried - concrete pad up to 10 sq. ft. (Per EA): $400.00/EA
+    *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft. (Per EA): $850.00
+    *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft. (Per EA): $1,500.00/EA
+    *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft. (Per EA): $2,000.00/EA
     *   TCMB3A Place Buried - handhole 13x24x18: $122.00/EA
     *   TCMB3B Place Buried - handhole 17x30x24: $243.00/EA
     *   TCMB3C Place Buried - handhole 24x36x24: $265.00/EA
@@ -1057,6 +1078,7 @@ ${projectDataContext}
     *   TCSS4 Splicing - Cable Only-Splice Fiber Optic Ribbon Cable >96 fibers: $12.00/EA
     *   TCSS8 Splicing - Waste water removal: $75.00/EA
     *   TCSS9 Splicing - Prep, Splice and Place Terminal Closure (Primary and Secondary) Ribbon Cable <= 12 Fibers: $194.00/EA
+    *   TCSS11 Splicing - Prep, Splice and Place Terminal Closure (Primary and Secondary) loose tube Cable <=12 Fibers (Per EA): $115.00
     *   TCSSM Splicing - Splice Micro Duct at Lateral: $6.00/EA
     *   TCSSMD Splicing - Splice Micro Duct at Duct Access Point (DAP): $6.00/EA
 
@@ -1128,7 +1150,7 @@ ${projectDataContext}
     *   TCHR63 Daily Equipment Rate - traffic barrel - Normal Rate: $20.00/DAY
     *   TCHR64 Weekly Equipment Rate - traffic barrel - Normal Rate: $95.00/WK
     *   TCHR65 Hourly Equipment Rate - work zone sign - Normal Rate: $6.00/HR
-    *   TCHR66 Daily Equipment Rate – work zone sign - Normal Rate: $28.00/DAY
+    *   TCHR66 Daily Equipment Rate - work zone sign - Normal Rate: $28.00/DAY
     *   TCHR67 Weekly Equipment Rate – work zone sign - Normal Rate: $95.00/WK
     *   TCHR68 Hourly Equipment Rate - traffic cones - Normal Rate: $3.00/HR
     *   TCHR69 Hourly Equipment Rate - traffic cones - Over time Rate: $5.00/HR
@@ -1340,49 +1362,6 @@ ${projectDataContext}
     *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft. (Per EA): $500.00
     *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft. (Per EA): $850.00
     *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft. (Per EA): $1,150.00
-
-*   **Trenching & Misc**:
-    *   TCMT1 Micro Trenching 1"-9" (Per FT): $7.25
-    *   TCMT2 Micro Trenching 9"-16" (Per FT): $7.15
-    *   TCMT3 Micro Trenching 16"-26" (Per FT): $7.60
-    *   TCMTT AERIAL - TREE TRIMMING (Per FT): $0.65
-    *   TCMU Material Mark-up (Cost + 5%): $0.00
-
-*   **Cabinets & Terminals**:
-    *   TCMU1 Placement of Fiber Distribution Cabinet (FDH/OLT) - Vault Mounted (Per EA): $215.00
-    *   TCMU2 Placement of Fiber Distribution Cabinet (FDH/OLT) - Pole Mounted (Per EA): $250.00
-    *   TCMU3 Placement of Fiber Distribution Cabinet (FDH/OLT) - Wall / Rack Mounted (Per EA): $250.00
-    *   TCMU4 Placement of Fiber Distribution Cabinet (FDH/OLT) - Vault / Sub surface Mounted (Per EA): $249.00
-    *   TCMU4A TURNKEY PLACE / REPLACE FIBER DISTRIBUTION HUB CLOSURE/SWING ARM MOUNTED (Per EA): $85.00
-    *   TCMU5 Placement of Fiber Distribution Terminal (FDT) - Vault Mounted-FlexNap (Per EA): $38.00
-    *   TCMU6 Placement of Fiber Distribution Terminal (FDT) - Pole Mounted-FlexNap (Per EA): $43.00
-    *   TCMU7 Placement of Fiber Distribution Terminal (FDT) - Wall / Rack Mounted-FlexNap (Per EA): $38.00
-    *   TCMU8 Placement of Fiber Distribution Terminal (FDT) - Vault / Sub surface Mounted-FlexNap (Per EA): $38.00
-    *   TCMU9 Placement of Fiber Distribution Terminal (FDT) - Building (SFU/MDU/MTU) (Per EA): $82.00
-    *   TCSP1 Placement of Bollard (Materials and Labor only) (Per EA): $120.00
-    *   TCSP2 Placement of Bollard (Materials, Labor, and Bollard) (Per EA): $225.00
-
-*   **Splicing**:
-    *   TCSS1 Splicing - Cable Only-Splice-Fiber Optic loose tube Cable <=96 fibers (Per EA): $17.00
-    *   TCSS2 Splicing - Cable Only-Splice-Splice Fiber Optic Ribbon Cable <=96 fibers (Per EA): $6.50
-    *   TCSS3 Splicing - Cable Only-Splice-Splice Fiber Optic loose tube Cable >96 fibers (Per EA): $15.00
-    *   TCSS4 Splicing - Cable Only-Splice Fiber Optic Ribbon Cable >96 fibers (Per EA): $6.00
-    *   TCSS8 Splicing - Waste water removal (Per EA): $45.00
-    *   TCSS9 Splicing - Prep, Splice and Place Terminal Closure (Primary and Secondary) Ribbon Cable <= 12 Fibers (Per EA): $115.00
-    *   TCSS11 Splicing - Prep, Splice and Place Terminal Closure (Primary and Secondary) loose tube Cable <=12 Fibers (Per EA): $115.00
-    *   TCSSM Splicing - Splice Micro Duct at Lateral (Per EA): $3.60
-    *   TCSSMD Splicing - Splice Micro Duct at Duct Access Point (DAP) (Per EA): $3.60
-
-*   **Underground**:
-    *   TCU1 Place Underground - cable, wire, or pipe in open conduit-pull method (Per FT): $0.75
-    *   TCU1B Place Underground - conventional cable, wire, or pipe in open conduit-blowing method (Per FT): $0.70
-    *   TCU3 Place Underground - Add ‘l cable, wire, or pipe simultaneously (Per FT): $0.30
-    *   TCU4 Place Underground - pull tape/wire in conduit/innerduct (Per FT): $0.45
-    *   TCU5 Place Underground - Add ‘l pull tape/wire in conduit/innerduct (Per FT): $0.25
-    *   TCU12 Remove Underground - cable, fiber, wire, or pipe (Per FT): $0.27
-    *   TCU13 Remove Underground - Add ‘l facility removed simultaneously (Per FT): $0.12
-    *   TCUB Place Underground - micro uni-tube fiber optic cable in open micro duct-blowing method (Per FT): $0.25
-    *   TCUB1 HEXATRONIC STINGRAY DROP/CABLE (2 TO 24 FIBERS IN 7/3.5MM MICRODUCT) -BLOWING METHOD (Per EA): $100.00
 
 *   **MDU / Specialized**:
     *   TEMDU-011 MDU MEETINGS (Per HR): $50.00
@@ -1615,9 +1594,9 @@ ${projectDataContext}
 *   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
 *   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
 *   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
+17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
 `;
 
-      
       const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
