@@ -367,9 +367,6 @@ const TillmanKnowledgeAssistant = () => {
             
             if (locateSheetName) {
                 const locateSheet = locateWorkbook.Sheets[locateSheetName];
-                // Use header:1 to get array of arrays first to inspect headers, then parse properly
-                // For simplicity, sticking to sheet_to_json with explicit header normalization if needed,
-                // but relying on raw parsing and manual column search is often safer for variable headers.
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { 
                     raw: false, 
                     defval: '',
@@ -401,36 +398,38 @@ const TillmanKnowledgeAssistant = () => {
                             }
                             mappedCount++;
                             
-                            // HELPER: Find a key in the row that loosely matches the search string
                             const normKeys = Object.keys(normalizedRow);
-                            const findKeyLoose = (searchTerms: string[]) => {
-                                for (const term of searchTerms) {
-                                    const match = normKeys.find(k => k.includes(term));
-                                    if (match) return match;
-                                }
-                                return null;
+                            
+                            // Helper to avoid "date", "status" columns when searching for ticket numbers
+                            const forbiddenTerms = ['date', 'status', 'due', 'exp', 'phone', 'note', 'comment', 'called'];
+                            const isSafeTicketKey = (k: string) => {
+                                return !forbiddenTerms.some(term => k.includes(term));
                             };
 
-                            // Explicit Ticket 1 Search
-                            let t1Key = normKeys.find(k => k === 'locate ticket') || 
-                                        normKeys.find(k => k === 'ticket 1') || 
-                                        normKeys.find(k => k === '1st ticket') ||
-                                        findKeyLoose(['locate ticket', 'ticket 1', 'ticket #1', '1st ticket', 'ticket#1']);
+                            // --- TICKET 1 SEARCH ---
+                            let t1Key = normKeys.find(k => k === 'locate ticket' || k === 'ticket' || k === 'ticket #' || k === 'ticket number' || k === '1st ticket' || k === 'ticket 1');
+                            if (!t1Key) {
+                                // Fuzzy search but exclude date/status columns
+                                t1Key = normKeys.find(k => (k.includes('locate ticket') || k.includes('ticket 1') || k.includes('1st ticket')) && isSafeTicketKey(k));
+                            }
                             
-                            // Explicit Ticket 2 Search
-                            let t2Key = normKeys.find(k => k === '2nd ticket') || 
-                                        normKeys.find(k => k === 'ticket 2') ||
-                                        findKeyLoose(['2nd ticket', 'ticket 2', 'ticket #2', 'second ticket']);
+                            // --- TICKET 2 SEARCH ---
+                            let t2Key = normKeys.find(k => k === '2nd ticket' || k === 'ticket 2' || k === 'ticket #2');
+                            if (!t2Key) {
+                                t2Key = normKeys.find(k => (k.includes('2nd ticket') || k.includes('ticket 2')) && isSafeTicketKey(k));
+                            }
                                         
-                            // Explicit Ticket 3 Search
-                            let t3Key = normKeys.find(k => k === '3rd ticket') || 
-                                        normKeys.find(k => k === 'ticket 3') ||
-                                        findKeyLoose(['3rd ticket', 'ticket 3', 'ticket #3', 'third ticket']);
+                            // --- TICKET 3 SEARCH ---
+                            let t3Key = normKeys.find(k => k === '3rd ticket' || k === 'ticket 3' || k === 'ticket #3');
+                            if (!t3Key) {
+                                t3Key = normKeys.find(k => (k.includes('3rd ticket') || k.includes('ticket 3')) && isSafeTicketKey(k));
+                            }
 
-                            // Explicit Ticket 4 Search
-                            let t4Key = normKeys.find(k => k === '4th ticket') || 
-                                        normKeys.find(k => k === 'ticket 4') ||
-                                        findKeyLoose(['4th ticket', 'ticket 4', 'ticket #4', 'fourth ticket']);
+                            // --- TICKET 4 SEARCH ---
+                            let t4Key = normKeys.find(k => k === '4th ticket' || k === 'ticket 4' || k === 'ticket #4');
+                            if (!t4Key) {
+                                t4Key = normKeys.find(k => (k.includes('4th ticket') || k.includes('ticket 4')) && isSafeTicketKey(k));
+                            }
 
                             const t1 = t1Key ? normalizedRow[t1Key] : '';
                             const t2 = t2Key ? normalizedRow[t2Key] : '';
@@ -1702,7 +1701,7 @@ ${knowledgeBase}`;
       <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print flex-none sticky bottom-0 z-10">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-end">
-            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red-600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`} title={isListening ? 'Stop listening' : 'Click to speak'}>
+            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`} title={isListening ? 'Stop listening' : 'Click to speak'}>
               {isListening ? (
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
               ) : (
