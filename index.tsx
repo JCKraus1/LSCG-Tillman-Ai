@@ -393,11 +393,11 @@ const TillmanKnowledgeAssistant = () => {
                             }
                             
                             // Robust Ticket Number Finding
-                            // Check various common header formats
-                            const t1 = normalizedRow['locate ticket'] || normalizedRow['ticket 1'] || normalizedRow['ticket #1'] || normalizedRow['ticket#1'] || normalizedRow['ticket'] || '';
-                            const t2 = normalizedRow['2nd ticket'] || normalizedRow['ticket 2'] || normalizedRow['ticket #2'] || normalizedRow['ticket#2'] || '';
-                            const t3 = normalizedRow['3rd ticket'] || normalizedRow['ticket 3'] || normalizedRow['ticket #3'] || normalizedRow['ticket#3'] || '';
-                            const t4 = normalizedRow['4th ticket'] || normalizedRow['ticket 4'] || normalizedRow['ticket #4'] || normalizedRow['ticket#4'] || '';
+                            // Check various common header formats including user specified "1st ticket" etc.
+                            const t1 = normalizedRow['locate ticket'] || normalizedRow['ticket 1'] || normalizedRow['ticket #1'] || normalizedRow['ticket#1'] || normalizedRow['ticket'] || normalizedRow['1st ticket'] || normalizedRow['locate ticket #'] || '';
+                            const t2 = normalizedRow['2nd ticket'] || normalizedRow['ticket 2'] || normalizedRow['ticket #2'] || normalizedRow['ticket#2'] || normalizedRow['second ticket'] || '';
+                            const t3 = normalizedRow['3rd ticket'] || normalizedRow['ticket 3'] || normalizedRow['ticket #3'] || normalizedRow['ticket#3'] || normalizedRow['third ticket'] || '';
+                            const t4 = normalizedRow['4th ticket'] || normalizedRow['ticket 4'] || normalizedRow['ticket #4'] || normalizedRow['ticket#4'] || normalizedRow['fourth ticket'] || '';
 
                             const ticketData = {
                                 ticket1: t1,
