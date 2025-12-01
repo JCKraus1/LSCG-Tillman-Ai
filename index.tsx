@@ -367,6 +367,9 @@ const TillmanKnowledgeAssistant = () => {
             
             if (locateSheetName) {
                 const locateSheet = locateWorkbook.Sheets[locateSheetName];
+                // Use header:1 to get array of arrays first to inspect headers, then parse properly
+                // For simplicity, sticking to sheet_to_json with explicit header normalization if needed,
+                // but relying on raw parsing and manual column search is often safer for variable headers.
                 const locateRawData: any[] = window.XLSX.utils.sheet_to_json(locateSheet, { 
                     raw: false, 
                     defval: '',
@@ -398,50 +401,41 @@ const TillmanKnowledgeAssistant = () => {
                             }
                             mappedCount++;
                             
-                            // Robust Ticket Number Finding
-                            // We look for keys containing 'locate ticket', 'ticket 1', '1st ticket' etc.
-                            // The normalized keys are lowercase.
-                            
+                            // HELPER: Find a key in the row that loosely matches the search string
                             const normKeys = Object.keys(normalizedRow);
-                            const findKey = (search: string) => normKeys.find(k => k.includes(search) && !k.includes('date') && !k.includes('status') && !k.includes('phone') && !k.includes('expire'));
+                            const findKeyLoose = (searchTerms: string[]) => {
+                                for (const term of searchTerms) {
+                                    const match = normKeys.find(k => k.includes(term));
+                                    if (match) return match;
+                                }
+                                return null;
+                            };
 
-                            const t1 = normalizedRow['locate ticket'] || 
-                                       normalizedRow['ticket 1'] || 
-                                       normalizedRow['ticket #1'] || 
-                                       normalizedRow['ticket#1'] || 
-                                       normalizedRow['ticket'] || 
-                                       normalizedRow['1st ticket'] || 
-                                       normalizedRow['locate ticket #'] || 
-                                       normalizedRow[findKey('locate ticket') || ''] || 
-                                       normalizedRow[findKey('1st ticket') || ''] || 
-                                       '';
+                            // Explicit Ticket 1 Search
+                            let t1Key = normKeys.find(k => k === 'locate ticket') || 
+                                        normKeys.find(k => k === 'ticket 1') || 
+                                        normKeys.find(k => k === '1st ticket') ||
+                                        findKeyLoose(['locate ticket', 'ticket 1', 'ticket #1', '1st ticket', 'ticket#1']);
+                            
+                            // Explicit Ticket 2 Search
+                            let t2Key = normKeys.find(k => k === '2nd ticket') || 
+                                        normKeys.find(k => k === 'ticket 2') ||
+                                        findKeyLoose(['2nd ticket', 'ticket 2', 'ticket #2', 'second ticket']);
+                                        
+                            // Explicit Ticket 3 Search
+                            let t3Key = normKeys.find(k => k === '3rd ticket') || 
+                                        normKeys.find(k => k === 'ticket 3') ||
+                                        findKeyLoose(['3rd ticket', 'ticket 3', 'ticket #3', 'third ticket']);
 
-                            const t2 = normalizedRow['2nd ticket'] || 
-                                       normalizedRow['ticket 2'] || 
-                                       normalizedRow['ticket #2'] || 
-                                       normalizedRow['ticket#2'] || 
-                                       normalizedRow['second ticket'] || 
-                                       normalizedRow[findKey('2nd ticket') || ''] ||
-                                       normalizedRow[findKey('ticket 2') || ''] ||
-                                       '';
+                            // Explicit Ticket 4 Search
+                            let t4Key = normKeys.find(k => k === '4th ticket') || 
+                                        normKeys.find(k => k === 'ticket 4') ||
+                                        findKeyLoose(['4th ticket', 'ticket 4', 'ticket #4', 'fourth ticket']);
 
-                            const t3 = normalizedRow['3rd ticket'] || 
-                                       normalizedRow['ticket 3'] || 
-                                       normalizedRow['ticket #3'] || 
-                                       normalizedRow['ticket#3'] || 
-                                       normalizedRow['third ticket'] || 
-                                       normalizedRow[findKey('3rd ticket') || ''] ||
-                                       normalizedRow[findKey('ticket 3') || ''] ||
-                                       '';
-
-                            const t4 = normalizedRow['4th ticket'] || 
-                                       normalizedRow['ticket 4'] || 
-                                       normalizedRow['ticket #4'] || 
-                                       normalizedRow['ticket#4'] || 
-                                       normalizedRow['fourth ticket'] || 
-                                       normalizedRow[findKey('4th ticket') || ''] ||
-                                       normalizedRow[findKey('ticket 4') || ''] ||
-                                       '';
+                            const t1 = t1Key ? normalizedRow[t1Key] : '';
+                            const t2 = t2Key ? normalizedRow[t2Key] : '';
+                            const t3 = t3Key ? normalizedRow[t3Key] : '';
+                            const t4 = t4Key ? normalizedRow[t4Key] : '';
 
                             const ticketData = {
                                 ticket1: t1,
@@ -1436,7 +1430,8 @@ CRITICAL INSTRUCTIONS:
 7.  **Tone**: Professional but friendly.
 8.  **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant.
 9.  **Linking**: You MUST use Markdown [Title](URL) for links.
-10. **Locates**: NEVER use Markdown tables for locate tickets.
+10. **Locate Tickets Formatting**: When asked for locate tickets, you **MUST** use the following specific bulleted format for every ticket:
+    *   **Tickets:** [Ticket Number], Phone: [Phone Number], Status: [Status], Due: [Due Date], Expires: [Expire Date]
 11. **Rate Cards**: When asked about rates, **ALWAYS clarify which rate card you are referencing**: either the "Tillman Fiber Standard Rate Card (v1.1)" OR the "Lightspeed Subcontractor Rate Card (Revised 2025)". The rates are DIFFERENT.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
