@@ -35,7 +35,8 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
 
     // Footage by Market
     const market = p['Market'] || 'General';
-    const footage = parseFloat(String(p['Footage UG'] || '0').replace(/,/g, '')) || 0;
+    // Use pre-calculated clean footage if available, else parse
+    const footage = p.CleanFootage !== undefined ? p.CleanFootage : (parseFloat(String(p['Footage UG'] || '0').replace(/[^0-9.]/g, '')) || 0);
     marketFootage[market] = (marketFootage[market] || 0) + footage;
   });
 
@@ -353,8 +354,7 @@ const TillmanKnowledgeAssistant = () => {
             const locateWorkbook = window.XLSX.read(locateArrayBuffer, { type: 'array' });
             
             console.log("📂 [LOCATE EXCEL] Workbook Loaded");
-            console.log("📑 [LOCATE EXCEL] Available Sheets:", locateWorkbook.SheetNames);
-
+            
             // Try to find a sheet with "master" in name, otherwise default to first sheet
             let locateSheetName = locateWorkbook.SheetNames.find((name: string) => 
                 name.toLowerCase().includes('master')
@@ -403,48 +403,36 @@ const TillmanKnowledgeAssistant = () => {
                             // Terms that indicate this is NOT the ticket number column
                             const forbiddenTerms = ['date', 'status', 'due', 'exp', 'phone', 'note', 'comment', 'called', 'complete', 'escalate', 'by', 'type'];
                             
-                            // Helper to determine if a key is potentially a ticket number column
+                            // Regex for detecting ticket columns: Must contain "ticket" or "locate", Must NOT contain forbidden terms
                             const isTicketKey = (k: string) => {
                                 if (forbiddenTerms.some(term => k.includes(term))) return false;
                                 return k.includes('ticket') || k.includes('locate');
                             };
-
-                            // Find all potential ticket columns
-                            const potentialTicketKeys = normKeys.filter(isTicketKey);
-
-                            // --- TICKET 1 SEARCH ---
-                            // Strict matches first
-                            let t1Key = potentialTicketKeys.find(k => 
-                                k === 'locate ticket' || 
-                                k === 'ticket' || 
-                                k === 'ticket #' || 
-                                k === 'ticket number' || 
-                                k.includes('1st') || 
-                                k.includes('ticket 1')
-                            );
                             
-                            // Fallback: Use the first potential key that doesn't imply 2nd, 3rd, or 4th
-                            if (!t1Key) {
-                                t1Key = potentialTicketKeys.find(k => 
-                                    !k.includes('2nd') && !k.includes('3rd') && !k.includes('4th') && 
-                                    !k.includes('ticket 2') && !k.includes('ticket 3') && !k.includes('ticket 4') &&
+                            const ticketKeys = normKeys.filter(isTicketKey);
+                            
+                            // Helper to extract value from a list of possible keys
+                            const getVal = (patterns: string[]) => {
+                                const key = ticketKeys.find(k => patterns.some(p => k.includes(p)));
+                                return key ? normalizedRow[key] : '';
+                            };
+
+                            // --- TICKET EXTRACTION LOGIC ---
+                            // 1st: Explicitly labeled 1st, or just generic ticket/locate without #2, #3, etc.
+                            let t1 = getVal(['1st', 'ticket 1', 'ticket #1']);
+                            if (!t1) {
+                                // Fallback: find a key that is just "ticket" or "locate ticket" without 2/3/4/5...
+                                const cleanKey = ticketKeys.find(k => 
+                                    !k.includes('2nd') && !k.includes('3rd') && !k.includes('4th') &&
+                                    !k.includes('2') && !k.includes('3') && !k.includes('4') &&
                                     !k.includes(' #2') && !k.includes(' #3')
                                 );
+                                if (cleanKey) t1 = normalizedRow[cleanKey];
                             }
-
-                            // --- TICKET 2 SEARCH ---
-                            let t2Key = potentialTicketKeys.find(k => k.includes('2nd') || k.includes('ticket 2') || k.includes('ticket #2'));
                             
-                            // --- TICKET 3 SEARCH ---
-                            let t3Key = potentialTicketKeys.find(k => k.includes('3rd') || k.includes('ticket 3') || k.includes('ticket #3'));
-                            
-                            // --- TICKET 4 SEARCH ---
-                            let t4Key = potentialTicketKeys.find(k => k.includes('4th') || k.includes('ticket 4') || k.includes('ticket #4'));
-
-                            const t1 = t1Key ? normalizedRow[t1Key] : '';
-                            const t2 = t2Key ? normalizedRow[t2Key] : '';
-                            const t3 = t3Key ? normalizedRow[t3Key] : '';
-                            const t4 = t4Key ? normalizedRow[t4Key] : '';
+                            const t2 = getVal(['2nd', 'ticket 2', 'ticket #2']);
+                            const t3 = getVal(['3rd', 'ticket 3', 'ticket #3']);
+                            const t4 = getVal(['4th', 'ticket 4', 'ticket #4']);
 
                             const ticketData = {
                                 ticket1: t1,
@@ -478,14 +466,14 @@ const TillmanKnowledgeAssistant = () => {
       }
 
       // --- PARSE PROJECT DATA ---
-      let allData: any[] = [];
+      // We use a Map to Deduplicate projects by NTP Number (Column A)
+      const projectMap = new Map<string, any>();
       
       if (projectResponse && projectResponse.ok) {
         const arrayBuffer = await projectResponse.arrayBuffer();
         
         const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
         console.log("📂 [PROJECT EXCEL] Workbook Loaded");
-        console.log("📑 [PROJECT EXCEL] Available Sheets:", workbook.SheetNames);
         
         const targetSheets = [
             "Tillman UG Footage",
@@ -520,12 +508,17 @@ const TillmanKnowledgeAssistant = () => {
 
                 const ntpStr = String(ntpValue || '').trim();
                 const locateInfo = locateMap[ntpStr] || [];
+                
+                // Parse clean footage here for consistency in math
+                const rawFootage = row['Footage UG'] || '0';
+                const cleanFootage = parseFloat(String(rawFootage).replace(/[^0-9.]/g, '')) || 0;
 
                 return {
                 ...row,
                 'NTP Number': ntpValue,
                 'Market': market,
-                'LocateTickets': locateInfo
+                'LocateTickets': locateInfo,
+                'CleanFootage': cleanFootage
                 };
             }).filter(row => {
                 const ntpNumber = row['NTP Number'];
@@ -544,12 +537,16 @@ const TillmanKnowledgeAssistant = () => {
                 return true;
             });
             
-            if (validRows.length > 0) {
-                allData = allData.concat(validRows);
-                console.log(`   -> Added ${validRows.length} valid projects from "${sheetName}"`);
-            } else {
-                console.log(`   -> No valid project rows found in "${sheetName}"`);
-            }
+            // Deduplicate and Add to Map
+            validRows.forEach(row => {
+                const ntpKey = String(row['NTP Number']).trim();
+                if (!projectMap.has(ntpKey)) {
+                    projectMap.set(ntpKey, row);
+                } else {
+                    // console.log(`Duplicate project ignored in ${sheetName}: ${ntpKey}`);
+                }
+            });
+
             } else {
                 console.warn(`⚠️ [PROJECT EXCEL] Target sheet "${sheetName}" NOT found.`);
             }
@@ -558,15 +555,17 @@ const TillmanKnowledgeAssistant = () => {
           throw new Error("Failed to download project excel file.");
       }
       
-      if (allData.length === 0) {
+      const uniqueProjects = Array.from(projectMap.values());
+      
+      if (uniqueProjects.length === 0) {
         throw new Error('No valid project rows found in target sheets.');
       }
       
-      setProjectData(allData);
+      setProjectData(uniqueProjects);
       setLastDataUpdate(new Date().toLocaleString());
       setIsLoadingData(false);
       setDataLoadError(null);
-      console.log('✅ [COMPLETE] Project data loaded successfully:', allData.length, 'total active projects');
+      console.log('✅ [COMPLETE] Project data loaded successfully:', uniqueProjects.length, 'unique active projects');
       
     } catch (error: any) {
       console.error('❌ Error loading project data:', error);
@@ -743,7 +742,7 @@ const TillmanKnowledgeAssistant = () => {
       
       // ... Existing project data formatting logic ...
       if (projectData && projectData.length > 0) {
-        projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
+        projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} unique active projects. Here's a summary:\n\n`;
         
         const supervisorGroups: any = {};
         projectData.forEach(project => {
@@ -757,8 +756,8 @@ const TillmanKnowledgeAssistant = () => {
         Object.keys(supervisorGroups).sort().forEach(supervisor => {
           const projects = supervisorGroups[supervisor];
           const totalFootage = projects.reduce((sum: number, p: any) => {
-            const footage = parseFloat(String(p['Footage UG'] || '0').replace(/,/g, '')) || 0;
-            return sum + footage;
+            // Use CleanFootage we calculated at load time
+            return sum + (p.CleanFootage || 0);
           }, 0);
           
           projectDataContext += `\n**${supervisor}**: ${projects.length} projects, ${totalFootage.toLocaleString()} ft remaining\nProjects: ${projects.map((p: any) => p['NTP Number']).join(', ')}\n`;
@@ -1647,6 +1646,7 @@ CRITICAL INSTRUCTIONS:
     *   **On Track or In Jeopardy**: The health status of the project.
 15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
 16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
+17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
