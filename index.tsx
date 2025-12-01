@@ -1368,8 +1368,11 @@ ${projectDataContext}
         5. Click on the created work shift form to enter all remaining information.
 *   **Submission**: Your redlines and all other information combined in one zip file should be sent to **Tillman Production**.
 `;
+      
+      const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
+Current Date: ${currentDate}
 
 CRITICAL DATA AVAILABILITY STATUS:
 ${projectData && projectData.length > 0 ? "ONLINE - Project Data Available" : "OFFLINE - NO PROJECT DATA"}
