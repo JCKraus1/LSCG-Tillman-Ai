@@ -400,36 +400,46 @@ const TillmanKnowledgeAssistant = () => {
                             
                             const normKeys = Object.keys(normalizedRow);
                             
-                            // Helper to avoid "date", "status" columns when searching for ticket numbers
-                            const forbiddenTerms = ['date', 'status', 'due', 'exp', 'phone', 'note', 'comment', 'called'];
-                            const isSafeTicketKey = (k: string) => {
-                                return !forbiddenTerms.some(term => k.includes(term));
+                            // Terms that indicate this is NOT the ticket number column
+                            const forbiddenTerms = ['date', 'status', 'due', 'exp', 'phone', 'note', 'comment', 'called', 'complete', 'escalate', 'by', 'type'];
+                            
+                            // Helper to determine if a key is potentially a ticket number column
+                            const isTicketKey = (k: string) => {
+                                if (forbiddenTerms.some(term => k.includes(term))) return false;
+                                return k.includes('ticket') || k.includes('locate');
                             };
 
+                            // Find all potential ticket columns
+                            const potentialTicketKeys = normKeys.filter(isTicketKey);
+
                             // --- TICKET 1 SEARCH ---
-                            let t1Key = normKeys.find(k => k === 'locate ticket' || k === 'ticket' || k === 'ticket #' || k === 'ticket number' || k === '1st ticket' || k === 'ticket 1');
-                            if (!t1Key) {
-                                // Fuzzy search but exclude date/status columns
-                                t1Key = normKeys.find(k => (k.includes('locate ticket') || k.includes('ticket 1') || k.includes('1st ticket')) && isSafeTicketKey(k));
-                            }
+                            // Strict matches first
+                            let t1Key = potentialTicketKeys.find(k => 
+                                k === 'locate ticket' || 
+                                k === 'ticket' || 
+                                k === 'ticket #' || 
+                                k === 'ticket number' || 
+                                k.includes('1st') || 
+                                k.includes('ticket 1')
+                            );
                             
-                            // --- TICKET 2 SEARCH ---
-                            let t2Key = normKeys.find(k => k === '2nd ticket' || k === 'ticket 2' || k === 'ticket #2');
-                            if (!t2Key) {
-                                t2Key = normKeys.find(k => (k.includes('2nd ticket') || k.includes('ticket 2')) && isSafeTicketKey(k));
-                            }
-                                        
-                            // --- TICKET 3 SEARCH ---
-                            let t3Key = normKeys.find(k => k === '3rd ticket' || k === 'ticket 3' || k === 'ticket #3');
-                            if (!t3Key) {
-                                t3Key = normKeys.find(k => (k.includes('3rd ticket') || k.includes('ticket 3')) && isSafeTicketKey(k));
+                            // Fallback: Use the first potential key that doesn't imply 2nd, 3rd, or 4th
+                            if (!t1Key) {
+                                t1Key = potentialTicketKeys.find(k => 
+                                    !k.includes('2nd') && !k.includes('3rd') && !k.includes('4th') && 
+                                    !k.includes('ticket 2') && !k.includes('ticket 3') && !k.includes('ticket 4') &&
+                                    !k.includes(' #2') && !k.includes(' #3')
+                                );
                             }
 
+                            // --- TICKET 2 SEARCH ---
+                            let t2Key = potentialTicketKeys.find(k => k.includes('2nd') || k.includes('ticket 2') || k.includes('ticket #2'));
+                            
+                            // --- TICKET 3 SEARCH ---
+                            let t3Key = potentialTicketKeys.find(k => k.includes('3rd') || k.includes('ticket 3') || k.includes('ticket #3'));
+                            
                             // --- TICKET 4 SEARCH ---
-                            let t4Key = normKeys.find(k => k === '4th ticket' || k === 'ticket 4' || k === 'ticket #4');
-                            if (!t4Key) {
-                                t4Key = normKeys.find(k => (k.includes('4th ticket') || k.includes('ticket 4')) && isSafeTicketKey(k));
-                            }
+                            let t4Key = potentialTicketKeys.find(k => k.includes('4th') || k.includes('ticket 4') || k.includes('ticket #4'));
 
                             const t1 = t1Key ? normalizedRow[t1Key] : '';
                             const t2 = t2Key ? normalizedRow[t2Key] : '';
