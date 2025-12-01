@@ -35,8 +35,8 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
 
     // Footage by Market
     const market = p['Market'] || 'General';
-    // Use pre-calculated clean footage if available, else parse
-    const footage = p.CleanFootage !== undefined ? p.CleanFootage : (parseFloat(String(p['Footage UG'] || '0').replace(/[^0-9.]/g, '')) || 0);
+    // Use RemainingFootage for analytics to show work left
+    const footage = p.RemainingFootage || 0;
     marketFootage[market] = (marketFootage[market] || 0) + footage;
   });
 
@@ -98,7 +98,7 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
 
         {/* Chart 3: Footage by Market */}
         <div className="h-[300px] w-full bg-gray-50 rounded-lg p-2 border">
-          <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Total Footage by Market</h3>
+          <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Remaining Footage by Market</h3>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={marketData} margin={{ top: 10, right: 30, left: 0, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -466,7 +466,6 @@ const TillmanKnowledgeAssistant = () => {
       }
 
       // --- PARSE PROJECT DATA ---
-      // We use a Map to Deduplicate projects by NTP Number (Column A)
       const projectMap = new Map<string, any>();
       
       if (projectResponse && projectResponse.ok) {
@@ -475,8 +474,9 @@ const TillmanKnowledgeAssistant = () => {
         const workbook = window.XLSX.read(arrayBuffer, { type: 'array' });
         console.log("📂 [PROJECT EXCEL] Workbook Loaded");
         
+        // Order matters: Process ACTIVE sheets first to populate map with active footage.
         const targetSheets = [
-            "Tillman UG Footage",
+            "Tillman UG Footage", // Primary Active Sheet
             "Completed Projects Pending PW",
             "Projects Pending Tillman QC ",
             "Comp Projects Invoiced-Paid Out"
@@ -509,17 +509,41 @@ const TillmanKnowledgeAssistant = () => {
                 const ntpStr = String(ntpValue || '').trim();
                 const locateInfo = locateMap[ntpStr] || [];
                 
-                // Parse clean footage here for consistency in math
-                // Ensure parsing handles string numbers with commas
-                const rawFootage = row['Footage UG'] || '0';
-                const cleanFootage = parseFloat(String(rawFootage).replace(/[^0-9.]/g, '')) || 0;
+                // --- FOOTAGE LOGIC ---
+                // 1. Try to find an explicit "Remaining" column (Column X per user hint)
+                const remainingKey = Object.keys(row).find(k => k.toLowerCase().includes("remaining") && k.toLowerCase().includes("footage"));
+                let rawRemaining = '0';
+                
+                if (sheetName.includes("Tillman UG Footage")) {
+                    if (remainingKey && row[remainingKey]) {
+                        rawRemaining = row[remainingKey];
+                    } else {
+                        // If no specific remaining column, assume standard footage column?
+                        // But user said "column x is footage remaining". 
+                        // If we can't find it, we default to 0 to avoid inflating totals with wrong data.
+                        // Or we use Footage UG if we think it's the remaining?
+                        // Let's assume if it's the Active sheet, we default to Footage UG if Remaining is missing.
+                        rawRemaining = row['Footage UG'] || '0'; 
+                    }
+                } else {
+                    // Completed sheets have 0 remaining footage
+                    rawRemaining = '0';
+                }
+
+                const totalScopeRaw = row['Footage UG'] || '0';
+
+                // Strict cleaning of footage to numbers only
+                const cleanRemaining = parseFloat(String(rawRemaining).replace(/[^0-9.]/g, '')) || 0;
+                const cleanTotal = parseFloat(String(totalScopeRaw).replace(/[^0-9.]/g, '')) || 0;
 
                 return {
-                ...row,
-                'NTP Number': ntpValue,
-                'Market': market,
-                'LocateTickets': locateInfo,
-                'CleanFootage': cleanFootage
+                    ...row,
+                    'NTP Number': ntpValue,
+                    'Market': market,
+                    'LocateTickets': locateInfo,
+                    'CleanFootage': cleanTotal, // Total Scope
+                    'RemainingFootage': cleanRemaining, // Logic-based remaining
+                    'SheetSource': sheetName
                 };
             }).filter(row => {
                 const ntpNumber = row['NTP Number'];
@@ -527,11 +551,10 @@ const TillmanKnowledgeAssistant = () => {
                 if (!ntpNumber || String(ntpNumber).trim() === '') return false;
                 
                 const lowerNtp = String(ntpNumber).toLowerCase().trim();
-
-                // Filter out Total rows or Subtotals which might skew math
+                
+                // Filter out Total/Subtotal rows which mess up math
                 if (lowerNtp.includes('total') || lowerNtp.includes('subtotal')) return false;
 
-                // Existing exclusions
                 if (typeof ntpNumber === 'string') {
                     const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
                     if (isExcluded) return false;
@@ -545,13 +568,13 @@ const TillmanKnowledgeAssistant = () => {
             
             // Deduplicate and Add to Map
             validRows.forEach(row => {
-                // Use Lowercase Key for strict deduplication to prevent math errors
                 const ntpKey = String(row['NTP Number']).trim().toLowerCase();
                 
+                // If we haven't seen this project yet, add it.
+                // Since we iterate targetSheets in order (Active first), 
+                // the active version of the project (with remaining footage) takes precedence.
                 if (!projectMap.has(ntpKey)) {
                     projectMap.set(ntpKey, row);
-                } else {
-                    // console.log(`Duplicate project ignored in ${sheetName}: ${ntpKey}`);
                 }
             });
 
@@ -764,8 +787,8 @@ const TillmanKnowledgeAssistant = () => {
         Object.keys(supervisorGroups).sort().forEach(supervisor => {
           const projects = supervisorGroups[supervisor];
           const totalFootage = projects.reduce((sum: number, p: any) => {
-            // Use CleanFootage we calculated at load time
-            return sum + (p.CleanFootage || 0);
+            // Use RemainingFootage based on sheet logic (0 if completed)
+            return sum + (p.RemainingFootage || 0);
           }, 0);
           
           projectDataContext += `\n**${supervisor}**: ${projects.length} projects, ${totalFootage.toLocaleString()} ft remaining\nProjects: ${projects.map((p: any) => p['NTP Number']).join(', ')}\n`;
@@ -804,7 +827,7 @@ const TillmanKnowledgeAssistant = () => {
              }).join('\n');
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Remaining Footage: ${project['RemainingFootage']} | Total Scope: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
@@ -1654,322 +1677,233 @@ CRITICAL INSTRUCTIONS:
     *   **On Track or In Jeopardy**: The health status of the project.
 15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
 16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
-17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
 
-      // Config for Google Search and Maps
-      const toolConfig: any = {};
-      if (userLocation) {
-        toolConfig.retrievalConfig = {
-            latLng: {
-                latitude: userLocation.lat,
-                longitude: userLocation.lng
-            }
-        };
-      }
-
-      // Call Google GenAI API
       const response = await aiRef.current.models.generateContent({
         model: 'gemini-2.5-flash',
-        contents: messageText,
+        contents: [
+          {
+            role: 'user',
+            parts: [
+              { text: messageText }
+            ]
+          }
+        ],
         config: {
+          responseMimeType: 'text/plain',
+          tools: [{ googleSearch: {} }, { googleMaps: {} }],
           systemInstruction: systemInstruction,
-          tools: [{googleSearch: {}}, {googleMaps: {}}],
-          toolConfig: toolConfig
         }
       });
 
-      const text = response.text;
-      
-      // Extract grounding metadata (sources/maps)
+      const aiText = response.text || "I'm sorry, I couldn't generate a response at this time.";
       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
-
-      const assistantMessage = {
-        role: 'assistant',
-        content: text,
-        groundingChunks: groundingChunks
-      };
-
-      setMessages([...updatedMessages, assistantMessage]);
       
-      if (autoSpeak && text) {
-        speakText(text);
-      }
+      setMessages(prev => [...prev, { role: 'assistant', content: aiText, groundingChunks }]);
+      if (autoSpeak) speakText(aiText);
+
     } catch (error: any) {
-      console.error('Error getting response:', error);
-      const errorMessage = {
-        role: 'assistant',
-        content: `I apologize, but I encountered an error: ${error.message || error}. Please check the console for details.`
-      };
-      setMessages([...updatedMessages, errorMessage]);
+      console.error('AI Error:', error);
+      const errorMessage = `I encountered an error: ${error.message || 'Unknown error'}. Please check your connection or API key.`;
+      setMessages(prev => [...prev, { role: 'assistant', content: errorMessage }]);
+      if (autoSpeak) speakText(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const quickQuestions = [
-    "What is the status of a specific project?",
-    "What is the weather at the current location?",
-    "Show me project analytics",
-    "Compare the TCBDB2 rate on both rate cards",
-    "Find a map of project D-HDH60"
-  ];
-
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-[#383e4b] to-[#000000] to-50% sm:to-100% bg-cover">
+    <div className="flex flex-col h-screen bg-gray-100 text-gray-800 font-sans chat-container">
       {/* Header */}
-      <div className="bg-gradient-to-r from-[#383e4b] to-[#000000] text-white p-4 shadow-lg header-buttons flex-none sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-             <div className="h-10 w-auto flex items-center justify-center">
-                <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
-             </div>
-            <div>
-              <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
-              <p className="text-gray-300 text-xs hidden sm:block">AI-powered Construction & Project Intelligence</p>
-            </div>
+      <div className="bg-gradient-to-r from-blue-700 to-blue-900 text-white p-4 shadow-lg flex items-center justify-between no-print mobile-header">
+        <div className="flex items-center gap-3">
+          <div className="bg-white p-2 rounded-full shadow-md">
+            <svg className="w-6 h-6 text-blue-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.384-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+            </svg>
           </div>
-          <div className="flex items-center gap-2">
-            <button 
-                onClick={() => { setShowAnalytics(!showAnalytics); setShowDashboard(false); }} 
-                className={`p-2 rounded-full transition-all ${showAnalytics ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
-                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            </button>
-            <button 
-                onClick={() => { setShowDashboard(!showDashboard); setShowAnalytics(false); }} 
-                className={`p-2 rounded-full transition-all ${showDashboard ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
-                title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-            </button>
-            <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title="Settings">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </button>
-            <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-2 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
-              {autoSpeak ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              )}
-            </button>
+          <div>
+            <h1 className="text-lg font-bold tracking-tight">Nexus Assistant</h1>
+            <p className="text-xs text-blue-200">LSCG Tillman Fiber AI</p>
           </div>
+        </div>
+        
+        <div className="flex items-center gap-2 header-buttons">
+           {/* Connection Status Indicator */}
+           <div className={`h-3 w-3 rounded-full ${isLoadingData ? 'bg-yellow-400 animate-pulse' : dataLoadError ? 'bg-red-500' : 'bg-green-400'} shadow-sm`} title={isLoadingData ? "Loading Data..." : dataLoadError ? "Data Error" : "Data Online"}></div>
+
+           <button 
+            onClick={() => setShowAnalytics(!showAnalytics)}
+            className={`p-2 rounded-full hover:bg-white/10 transition-colors ${showAnalytics ? 'bg-white/20' : ''}`}
+            title="Toggle Analytics"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+          </button>
+
+          <button 
+            onClick={() => setShowDashboard(!showDashboard)}
+            className={`p-2 rounded-full hover:bg-white/10 transition-colors ${showDashboard ? 'bg-white/20' : ''}`}
+            title="Toggle Dashboard"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+          </button>
+
+          <button 
+            onClick={() => setShowSettings(!showSettings)}
+            className={`p-2 rounded-full hover:bg-white/10 transition-colors ${showSettings ? 'bg-white/20' : ''}`}
+            title="Settings"
+          >
+            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+          </button>
         </div>
       </div>
 
-      {/* Settings Modal */}
+      {/* Settings Panel */}
       {showSettings && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in no-print" onClick={() => setShowSettings(false)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="text-xl font-bold text-gray-800">Settings</h3>
-              <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+        <div className="bg-gray-100 p-4 border-b border-gray-300 animate-fade-in no-print">
+          <div className="max-w-4xl mx-auto flex flex-wrap gap-4 items-center justify-between">
+            <div className="flex items-center gap-2">
+              <label className="text-sm font-semibold text-gray-700">Voice:</label>
+              <select 
+                value={selectedVoiceName} 
+                onChange={handleVoiceChange}
+                className="p-1.5 text-sm border rounded bg-white text-gray-800 shadow-sm focus:ring-2 focus:ring-blue-500 outline-none"
+              >
+                {availableVoices.map(v => (
+                  <option key={v.name} value={v.name}>{v.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex items-center gap-3">
+              <button onClick={() => setAutoSpeak(!autoSpeak)} className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${autoSpeak ? 'bg-blue-600 text-white shadow' : 'bg-gray-200 text-gray-600 hover:bg-gray-300'}`}>
+                {autoSpeak ? '🔊 Auto-Speak ON' : '🔇 Auto-Speak OFF'}
+              </button>
+              <button onClick={handleDownloadChat} className="px-3 py-1.5 rounded bg-white border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition-colors shadow-sm">
+                💾 Save Chat
+              </button>
+              <button onClick={handlePrintChat} className="px-3 py-1.5 rounded bg-white border border-gray-300 text-gray-700 text-sm hover:bg-gray-50 transition-colors shadow-sm">
+                🖨️ Print
               </button>
             </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Voice Selection</label>
-                <select 
-                  value={selectedVoiceName}
-                  onChange={handleVoiceChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="">Default Voice</option>
-                  {availableVoices.map((voice) => (
-                    <option key={voice.name} value={voice.name}>
-                      {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </select>
-              </div>
+          </div>
+        </div>
+      )}
 
-              <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Location Status</h4>
-                  <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${userLocation ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {userLocation ? (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                            Location Active ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
-                          </>
-                      ) : (
-                          <>
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                             Location Not Detected (Enable for Weather/Maps)
-                          </>
-                      )}
-                  </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Chat Actions</label>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={handleDownloadChat}
-                    className="flex-1 bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Save Transcript
-                  </button>
-                  <button 
-                    onClick={handlePrintChat}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                    Print Chat
-                  </button>
-                </div>
-              </div>
+      {/* Main Content Area */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-4" onClick={() => setShowSettings(false)}>
+        {apiKeyError && (
+            <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 rounded shadow-md animate-message" role="alert">
+                <p className="font-bold">Configuration Error</p>
+                <p>Google GenAI API Key is missing. Please add it to <code>index.html</code>.</p>
             </div>
+        )}
+
+        {/* Analytics Section */}
+        {showAnalytics && projectData && (
+          <div className="max-w-6xl mx-auto w-full">
+             <ProjectAnalytics projectData={projectData} />
           </div>
-        </div>
-      )}
+        )}
 
-      {/* API Key Error Banner */}
-      {apiKeyError && (
-        <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md no-print">
-          ⚠️ MISSING API KEY: The application cannot connect to Gemini. <br/>
-          If you are running on GitHub Pages, you must manually set your API key in the index.html file.
-        </div>
-      )}
-
-      {/* Data Load Error Banner */}
-      {dataLoadError && (
-        <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between no-print">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{dataLoadError}</span>
+        {/* Dashboard Section */}
+        {showDashboard && (
+          <div className="max-w-6xl mx-auto w-full">
+            <ExternalDashboard />
           </div>
-          <button onClick={loadSheetJSAndFetchData} className="text-red-700 underline font-semibold hover:text-red-900">Retry</button>
-        </div>
-      )}
-
-      {/* Analytics Dashboard View */}
-      {showAnalytics && (
-         <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
-            <ProjectAnalytics projectData={projectData || []} />
-         </div>
-      )}
-
-      {/* External Dashboard View */}
-      {showDashboard && (
-        <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
-          <ExternalDashboard />
-        </div>
-      )}
-
-      {/* Quick Questions */}
-      {messages.length === 1 && !showDashboard && !showAnalytics && (
-        <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print flex-none">
-          <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {quickQuestions.map((question, idx) => (
-              <button key={idx} onClick={() => sendMessage(question)} className="text-left p-3 bg-white rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition-all border border-gray-200 text-sm animate-fade-in" style={{animationDelay: `${idx * 100}ms`}}>
-                <svg className="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                {question}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 chat-container bg-[#f3f4f6] w-full">
-        <div className="max-w-4xl mx-auto space-y-4 pb-20">
-          {messages.map((message, idx) => (
-            <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper animate-message`}>
-              <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 assistant-message rounded-bl-none'}`}>
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                   {message.role === 'assistant' ? renderMessageContent(message) : message.content}
-                </div>
-                
-                {message.role === 'assistant' && idx === messages.length - 1 && !isLoading && (
-                  <div className="mt-2 flex items-center gap-3 no-print">
-                      <button onClick={() => speakText(message.content)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                        Read aloud
-                      </button>
-                  </div>
-                )}
+        )}
+        
+        {/* Chat Messages */}
+        <div className="max-w-3xl mx-auto w-full space-y-6 pb-24">
+          {messages.map((msg, idx) => (
+            <div 
+              key={idx} 
+              className={`flex w-full ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-message`}
+            >
+              <div 
+                className={`max-w-[85%] md:max-w-[75%] p-4 rounded-2xl shadow-sm border message-bubble ${
+                  msg.role === 'user' 
+                    ? 'bg-blue-600 text-white border-blue-600 user-message' 
+                    : 'bg-white text-gray-800 border-gray-200'
+                }`}
+              >
+                 {renderMessageContent(msg)}
               </div>
             </div>
           ))}
+          
           {isLoading && (
-            <div className="flex justify-start no-print animate-message">
-              <div className="bg-white rounded-2xl rounded-bl-none px-5 py-4 shadow-sm border border-gray-200 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
+            <div className="flex justify-start w-full animate-message">
+              <div className="bg-white p-4 rounded-2xl shadow-sm border border-gray-200 flex items-center gap-3">
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0s' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }}></div>
+                </div>
+                <span className="text-gray-500 text-sm font-medium">Nexus is thinking...</span>
               </div>
             </div>
           )}
+          
           <div ref={messagesEndRef} />
         </div>
       </div>
 
       {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print flex-none sticky bottom-0 z-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex gap-2 items-end">
-            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`} title={isListening ? 'Stop listening' : 'Click to speak'}>
-              {isListening ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-              )}
-            </button>
-            <div className="flex-1 relative">
-              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? "Listening..." : "Type your question or click the microphone to speak..."} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
-            </div>
-            <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none" title="Send message">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-            </button>
-          </div>
-          {isListening && (
-            <p className="text-sm text-red-600 mt-2 flex items-center gap-2 animate-pulse justify-center sm:justify-start">
-              <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-              Listening... Speak your question now
-            </p>
-          )}
-          {isSpeaking && (
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-sm text-blue-600 flex items-center gap-2">
-                <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                Speaking response...
-              </p>
-              <button onClick={stopSpeaking} className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                Stop
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
+      <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area fixed bottom-0 w-full z-10 no-print">
+        <div className="max-w-3xl mx-auto flex items-end gap-3">
+           <button
+            onClick={toggleListening}
+            className={`p-3 rounded-full transition-all duration-200 shadow-md ${
+              isListening 
+                ? 'bg-red-500 text-white animate-pulse scale-110' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+            title="Voice Input"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
+          </button>
 
-      {/* Footer */}
-      <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
-        <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap text-center">
-          <span>💡 Ask about procedures, weather, rates, or live project data</span>
-          <span className="hidden sm:inline">•</span>
-          <span>🎤 Voice works in Chrome & Edge</span>
+          <div className="flex-1 bg-gray-50 rounded-2xl border border-gray-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent transition-all shadow-inner">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                  e.preventDefault();
+                  sendMessage();
+                }
+              }}
+              placeholder="Ask Nexus about projects, rate cards, or procedures..."
+              className="w-full bg-transparent border-0 p-3 max-h-32 resize-none focus:ring-0 text-gray-800 placeholder-gray-400"
+              rows={1}
+            />
+          </div>
+
+          <button
+            onClick={() => sendMessage()}
+            disabled={!inputText.trim() || isLoading}
+            className={`p-3 rounded-full transition-all duration-200 shadow-md ${
+              !inputText.trim() || isLoading
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-blue-600 text-white hover:bg-blue-700 hover:scale-105 active:scale-95'
+            }`}
+            title="Send Message"
+          >
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+          </button>
+        </div>
+        <div className="max-w-3xl mx-auto text-center mt-2">
+            <p className="text-[10px] text-gray-400">Powered by Google Gemini 2.5 Flash • LSCG Internal Tool</p>
         </div>
       </div>
     </div>
   );
 };
 
-const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);
+const container = document.getElementById("root");
+if (container) {
+  const root = createRoot(container);
+  root.render(<TillmanKnowledgeAssistant />);
+}
