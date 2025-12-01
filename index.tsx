@@ -399,11 +399,49 @@ const TillmanKnowledgeAssistant = () => {
                             mappedCount++;
                             
                             // Robust Ticket Number Finding
-                            // Check various common header formats including user specified "1st ticket" etc.
-                            const t1 = normalizedRow['locate ticket'] || normalizedRow['ticket 1'] || normalizedRow['ticket #1'] || normalizedRow['ticket#1'] || normalizedRow['ticket'] || normalizedRow['1st ticket'] || normalizedRow['locate ticket #'] || '';
-                            const t2 = normalizedRow['2nd ticket'] || normalizedRow['ticket 2'] || normalizedRow['ticket #2'] || normalizedRow['ticket#2'] || normalizedRow['second ticket'] || '';
-                            const t3 = normalizedRow['3rd ticket'] || normalizedRow['ticket 3'] || normalizedRow['ticket #3'] || normalizedRow['ticket#3'] || normalizedRow['third ticket'] || '';
-                            const t4 = normalizedRow['4th ticket'] || normalizedRow['ticket 4'] || normalizedRow['ticket #4'] || normalizedRow['ticket#4'] || normalizedRow['fourth ticket'] || '';
+                            // We look for keys containing 'locate ticket', 'ticket 1', '1st ticket' etc.
+                            // The normalized keys are lowercase.
+                            
+                            const normKeys = Object.keys(normalizedRow);
+                            const findKey = (search: string) => normKeys.find(k => k.includes(search) && !k.includes('date') && !k.includes('status') && !k.includes('phone') && !k.includes('expire'));
+
+                            const t1 = normalizedRow['locate ticket'] || 
+                                       normalizedRow['ticket 1'] || 
+                                       normalizedRow['ticket #1'] || 
+                                       normalizedRow['ticket#1'] || 
+                                       normalizedRow['ticket'] || 
+                                       normalizedRow['1st ticket'] || 
+                                       normalizedRow['locate ticket #'] || 
+                                       normalizedRow[findKey('locate ticket') || ''] || 
+                                       normalizedRow[findKey('1st ticket') || ''] || 
+                                       '';
+
+                            const t2 = normalizedRow['2nd ticket'] || 
+                                       normalizedRow['ticket 2'] || 
+                                       normalizedRow['ticket #2'] || 
+                                       normalizedRow['ticket#2'] || 
+                                       normalizedRow['second ticket'] || 
+                                       normalizedRow[findKey('2nd ticket') || ''] ||
+                                       normalizedRow[findKey('ticket 2') || ''] ||
+                                       '';
+
+                            const t3 = normalizedRow['3rd ticket'] || 
+                                       normalizedRow['ticket 3'] || 
+                                       normalizedRow['ticket #3'] || 
+                                       normalizedRow['ticket#3'] || 
+                                       normalizedRow['third ticket'] || 
+                                       normalizedRow[findKey('3rd ticket') || ''] ||
+                                       normalizedRow[findKey('ticket 3') || ''] ||
+                                       '';
+
+                            const t4 = normalizedRow['4th ticket'] || 
+                                       normalizedRow['ticket 4'] || 
+                                       normalizedRow['ticket #4'] || 
+                                       normalizedRow['ticket#4'] || 
+                                       normalizedRow['fourth ticket'] || 
+                                       normalizedRow[findKey('4th ticket') || ''] ||
+                                       normalizedRow[findKey('ticket 4') || ''] ||
+                                       '';
 
                             const ticketData = {
                                 ticket1: t1,
@@ -740,7 +778,9 @@ const TillmanKnowledgeAssistant = () => {
           if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
              const tickets = project['LocateTickets'];
              locateDetailsStr = tickets.map((l: any, idx: number) => {
-                 const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4].filter(t => t && String(t).trim() !== '').join(', ');
+                 const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4]
+                    .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
+                    .join(', ');
                  const fields = [];
                  if (ticketNums) fields.push(`Tickets: [${ticketNums}]`);
                  if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
@@ -1367,6 +1407,15 @@ ${projectDataContext}
         4. Click **Save**.
         5. Click on the created work shift form to enter all remaining information.
 *   **Submission**: Your redlines and all other information combined in one zip file should be sent to **Tillman Production**.
+
+## SECTION 11: PRODUCTION SUBMISSION & APPROVAL
+*   **Daily Submission**: Production should be submitted daily so it can be Level 1 and 2 approved daily. If it is not, we cannot guarantee that all production will be Level 2 approved by the pay close cut off.
+*   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, has been uploaded onto the task on the FORMS tab.
+*   **Task Assignment**:
+    *   All **construction** work falls on the **Phase 1** task.
+    *   All **fiber** work falls on the **Phase 2** task.
+*   **Friday Backdating**: On Fridays, you must **back date** the production when Level 1 approving to the day before (Thursday), since Thursday is the end of the pay period.
+*   **Missing Projects**: If you attempt to assign a sub/tech to a project and cannot find the project, reach out to **Tillman Production** immediately to get the project entered ASAP.
 `;
       
       const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
