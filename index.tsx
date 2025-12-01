@@ -510,6 +510,7 @@ const TillmanKnowledgeAssistant = () => {
                 const locateInfo = locateMap[ntpStr] || [];
                 
                 // Parse clean footage here for consistency in math
+                // Ensure parsing handles string numbers with commas
                 const rawFootage = row['Footage UG'] || '0';
                 const cleanFootage = parseFloat(String(rawFootage).replace(/[^0-9.]/g, '')) || 0;
 
@@ -524,11 +525,16 @@ const TillmanKnowledgeAssistant = () => {
                 const ntpNumber = row['NTP Number'];
                 
                 if (!ntpNumber || String(ntpNumber).trim() === '') return false;
+                
+                const lowerNtp = String(ntpNumber).toLowerCase().trim();
 
+                // Filter out Total rows or Subtotals which might skew math
+                if (lowerNtp.includes('total') || lowerNtp.includes('subtotal')) return false;
+
+                // Existing exclusions
                 if (typeof ntpNumber === 'string') {
-                const lowerNtp = ntpNumber.toLowerCase().trim();
-                const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
-                if (isExcluded) return false;
+                    const isExcluded = excludedPhrases.some(phrase => lowerNtp.includes(phrase.toLowerCase()));
+                    if (isExcluded) return false;
                 }
 
                 const hasData = Object.values(row).some(value => value && String(value).trim() !== '');
@@ -539,7 +545,9 @@ const TillmanKnowledgeAssistant = () => {
             
             // Deduplicate and Add to Map
             validRows.forEach(row => {
-                const ntpKey = String(row['NTP Number']).trim();
+                // Use Lowercase Key for strict deduplication to prevent math errors
+                const ntpKey = String(row['NTP Number']).trim().toLowerCase();
+                
                 if (!projectMap.has(ntpKey)) {
                     projectMap.set(ntpKey, row);
                 } else {
