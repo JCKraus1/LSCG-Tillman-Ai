@@ -377,7 +377,13 @@ const TillmanKnowledgeAssistant = () => {
                         normalizedRow[k.trim().toLowerCase()] = row[k];
                     });
                     
-                    const mapNum = normalizedRow['map #'] || normalizedRow['map#'] || normalizedRow['project'] || normalizedRow['ntp number'];
+                    // Robust Key Finding for Map/Project Number
+                    const mapNum = normalizedRow['map #'] || 
+                                   normalizedRow['map#'] || 
+                                   normalizedRow['project'] || 
+                                   normalizedRow['ntp number'] || 
+                                   normalizedRow['job #'] ||
+                                   normalizedRow['job'];
                     
                     if (mapNum) {
                         const key = String(mapNum).trim();
@@ -385,22 +391,30 @@ const TillmanKnowledgeAssistant = () => {
                             if (!locateMap[key]) {
                                 locateMap[key] = [];
                             }
+                            
+                            // Robust Ticket Number Finding
+                            // Check various common header formats
+                            const t1 = normalizedRow['locate ticket'] || normalizedRow['ticket 1'] || normalizedRow['ticket #1'] || normalizedRow['ticket#1'] || normalizedRow['ticket'] || '';
+                            const t2 = normalizedRow['2nd ticket'] || normalizedRow['ticket 2'] || normalizedRow['ticket #2'] || normalizedRow['ticket#2'] || '';
+                            const t3 = normalizedRow['3rd ticket'] || normalizedRow['ticket 3'] || normalizedRow['ticket #3'] || normalizedRow['ticket#3'] || '';
+                            const t4 = normalizedRow['4th ticket'] || normalizedRow['ticket 4'] || normalizedRow['ticket #4'] || normalizedRow['ticket#4'] || '';
+
                             const ticketData = {
-                                ticket1: normalizedRow['locate ticket'] || normalizedRow['ticket 1'] || '',
-                                ticket2: normalizedRow['2nd ticket'] || normalizedRow['ticket 2'] || '',
-                                ticket3: normalizedRow['3rd ticket'] || normalizedRow['ticket 3'] || '',
-                                ticket4: normalizedRow['4th ticket'] || normalizedRow['ticket 4'] || '',
-                                phone: normalizedRow['locate number'] || normalizedRow['phone number'] || '',
-                                area: normalizedRow['area'] || '',
-                                company: normalizedRow['company name'] || '',
-                                dateCalled: normalizedRow['date called'] || '',
+                                ticket1: t1,
+                                ticket2: t2,
+                                ticket3: t3,
+                                ticket4: t4,
+                                phone: normalizedRow['locate number'] || normalizedRow['phone number'] || normalizedRow['phone'] || '',
+                                area: normalizedRow['area'] || normalizedRow['city'] || '',
+                                company: normalizedRow['company name'] || normalizedRow['company'] || '',
+                                dateCalled: normalizedRow['date called'] || normalizedRow['called date'] || '',
                                 dueDate: normalizedRow['due date'] || '',
-                                expireDate: normalizedRow['expire date'] || normalizedRow['expiration date'] || '',
+                                expireDate: normalizedRow['expire date'] || normalizedRow['expiration date'] || normalizedRow['exp date'] || '',
                                 escalated: normalizedRow['date escalated'] || '',
                                 status: normalizedRow['ticket status'] || normalizedRow['status'] || '',
-                                completed: normalizedRow['date ticket completed'] || '',
+                                completed: normalizedRow['date ticket completed'] || normalizedRow['date completed'] || '',
                                 footage: normalizedRow['footage'] || '',
-                                notes: normalizedRow['notes'] || '',
+                                notes: normalizedRow['notes'] || normalizedRow['comments'] || '',
                             };
                             locateMap[key].push(ticketData);
                         }
