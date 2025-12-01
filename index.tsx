@@ -809,6 +809,114 @@ TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
 ${projectDataContext}
 
+## SECTION 1: EXECUTION OF BOM, SOW, NTP, PO, INVOICING, CO’s & COP’s
+
+### BILL OF MATERIALS (BOM) & SCOPE OF WORK (SOW)
+*   **Creation**: Engineering Vendor creates BOM/SOW in Sitetracker. Line items initiated by Engineering Vendor, reviewed by TFC QC Design Engineer.
+*   **Template**: Vendors must select the correct template for the Job Type.
+*   **Approvals**: Engineering Vendor submits -> TFC QC Design Engineer reviews and approves.
+*   **Common Mistakes**: BOM totals not matching Design Drawings; Incorrect Microduct/conduit counts; Incorrect Material scoping; Lacking detailed summary on front page of Design Drawings.
+
+### NOTICE TO PROCEED (NTP)
+*   **Definition**: Official authorization for the construction vendor to begin work. Issued only after "Release to Construction" (RTC) status.
+*   **Process**: Construction Project Coordinator (PC) assembles NTP package (Design, BOM, Permits, ABF). Zips and uploads to Sitetracker Files. Notifies Vendor.
+*   **Timeline**: Vendor must access NTP package and submit Purchase Order (PO) request in Sitetracker within **3 days**.
+*   **Construction Window**: NTP actualization triggers the **45-day** construction timeline.
+*   **Package Contents**: Permits, Construction Design (CD), BOM, As-Built Fiber (ABF).
+
+### PURCHASE ORDERS (PO) & INVOICING
+*   **PO Process**: Vendor receives NTP -> Vendor submits PO in Sitetracker (within 3 days) -> Vendor approves PO.
+*   **Invoicing Phase 1**: Vendor completes Phase 1 construction -> Requests QC Inspection -> Passes QC -> Submits Phase 1 Invoice (within 2 days of QC).
+*   **Invoicing Phase 2**: Vendor completes Phase 2 -> Requests QC -> Uploads Closeout Package (COP) -> Submits Phase 2 Invoice (within 5 days of completion).
+*   **Approval**: Construction PM reviews and approves invoices. Finance team validates integration to NetSuite.
+*   **True Up**: Like-for-like adjustments (variance ≤ 5%). Vendor submits True Up BOM/SOW -> PM approves -> System generates PO -> Vendor submits Invoice.
+*   **Change Order (CO)**: Scope additions or changes > 5%. Vendor submits CO Request Form -> Senior CM approves -> Vendor initiates PO/Invoice.
+
+### CLOSE OUT PACKAGE (COP)
+*   **Importance**: Final proof project is built to standard. Required for payment.
+*   **Submission**: Vendor uploads COP to Sitetracker Files (Category: 'Closeout').
+*   **Naming Convention**: 'Job Number_Document Name_COP'
+*   **Critical Step**: Vendor MUST actualize the "Closeout Package Submission" date in Sitetracker. Without this date, the project will not move to payment.
+*   **Required Documentation**:
+    1.  **Redlines (As-Builts)**: Final marked-up drawings. Must show correct conduit footage, GIS locations (decimal format) for all assets (FX4, Vaults, Toby boxes, etc.), sequential fiber footage, cable manufacturer, offsets from EOP/BOC.
+    2.  **Bore Logs**: Records of all bores. Must include Start Point, Footage, Depth, Offsets, Handhole # and Stationing.
+    3.  **Photos**: Before/After photos of area, FX4 (pad, conduits, placement), Vaults (open/closed, gravel, ground rod, locate wire, splice case, coil, marker ball), Toby Boxes (open/closed).
+    4.  **ABF Verification Form**: Hexatronic form completed in Excel. Must match photo addresses.
+    5.  **BOM**: Actual materials used.
+    6.  **Splice Results**: OTDR and ILM test results (PDF) + splice case photos.
+    7.  **Tillman QC Sign-Off**: Signed TFC Construction Compliance Checklist.
+    8.  **GPS As-Builts**: 1-foot accuracy.
+    9.  **Permits/Inspections**: Copies of all permits and closed inspections.
+
+### TIMELINES & SLAs
+*   **Construction Start**: Within 30 days of NTP.
+*   **Restoration**: 7-Day Restoration Policy (Mandatory). Complete restoration within 7 days of project completion.
+*   **COP Submission**: Within 5 days of restoration completion.
+*   **QC Inspection Request**: Within 2 business days of phase completion.
+*   **Invoice Review**: 2 days for PM review.
+
+## SECTION 2: OSP ENGINEERING STANDARDS
+
+### ARCHITECTURE
+*   **Backbone/Feeder**: Traditional ribbon fiber tying Remote OLTs in ring configuration. Exclusively using FX4 solution (SF8/FX8 no longer used for design).
+*   **Distribution**:
+    *   **SFU**: 1st choice: Hexatronic Micro duct solution (buried). 2nd choice: Corning FlexNap (Distributive Split 1x8 to 1x4).
+    *   **MDU**: Garden Style = Hexatronic. Mid/High Rise = Corning MDU suite.
+*   **OLT Specs**: 50k HHP per Aggregation Router. FX-4 max HHP 6000.
+*   **Splitting**: Centralized Split (1x32 at FDH). FX4 OLT split is 1x2.
+
+### CONSTRUCTION & INSTALLATION
+*   **Depth of Burial**: Minimum 24" for DA Fiber. 36" for underground distribution multiduct. 
+*   **Conduit**:
+    *   Path along one side of roadway with 1.5" duct.
+    *   Every major road crossing: Additional 1.5" conduit between vaults.
+    *   Toby Box: Max 4 addresses served.
+*   **Handholes**:
+    *   Mount flush to earth. 5-6" crushed rock base.
+    *   **30x48x36**: At FX4 locations.
+    *   **24x36x24**: Backbone/Feeder environments or every 1000', 90-degree turns, major road crossings.
+    *   **17x30x24**: Larger distribution fibers, splice points, laterals.
+    *   **13x24x18**: G-5 terminal closure.
+    *   **Toby Box**: 8.43 x 11.85 inches for micro ducts.
+*   **Locate Wire**: #12AWG Copperhead Tracer Wire.
+*   **Marker Balls**: Place in every handhole with a splice in Feeder Route, all FDH locations, and Branch DAPs.
+*   **Coil Loops**:
+    *   80' loop: Pass through (no future splice).
+    *   100' loop: Future splice, MDU, intersections, major road crossings.
+    *   50' loop: Terminal locations, 90-degree change of direction.
+
+### FIBER & SPLICING
+*   **Fiber Types**: 288/144 Ribbon, 96/48 Loose Tube.
+*   **Splicing**: Fusion splicing required. 0.05 dB max loss per splice.
+*   **Testing**: Bi-directional OTDR at 1310nm and 1550nm.
+*   **Stingray**: Used to link multiple 96-FDH together (Daisy Chain). 1-9 fibers = 12F Stingray; 10+ fibers = 24F Stingray. Max 90 homes per Hexatronic 96-FDH.
+
+### GROUNDING
+*   **Ring**: 2 AWG solid tinned copper wire.
+*   **Rods**: Min 8' length, 5/8" diameter. Min 2 rods per pad.
+*   **Connections**: Exothermic welds (Cadweld) for ground ring.
+
+## SECTION 3: ROLES & RESPONSIBILITIES
+*   **Construction Project Coordinator (CX PC)**: Assemble NTP package, send NTP email, coordinate with vendors.
+*   **Construction Vendor**: Access NTP, submit PO, execute work, request QC, submit Invoices/COP.
+*   **Engineering Vendor**: Design project, create BOM/SOW, generate PO records.
+*   **TFC QC Design Engineer**: Performs QC on design, SOW/BOM (One-pass quality check).
+*   **Construction PM**: Review invoice requests, validate work alignment, approve/deny.
+
+## SECTION 4: SAFETY
+*   **PPE**: Hard hat, safety vest, steel-toed boots, glasses/goggles required.
+*   **Digging**: Pothole/hand dig underground path before boring.
+*   **Traffic Control**: MOT permits required on-site.
+
+## SECTION 5: GLOSSARY TERMS
+*   **NTP Number**: The Project Name/Number used in the Excel sheet (Column A).
+*   **FDH**: Fiber Distribution Hub.
+*   **DAP**: Duct Access Point (2x4x3 bore pit).
+*   **FX4**: Nokia OLT Cabinet.
+*   **ABF**: Air Blown Fiber.
+*   **COP**: Closeout Package.
+*   **GIG**: Good to Go / Growth Inhibiting Gaps (deficiencies).
+
 ## SECTION 6A: TILLMAN FIBER STANDARD RATE CARD (Construction v1.1)
 *   **Aerial**:
     *   TCA1 Place Aerial - Strand 6M to 6.6M: $1.10/FT
@@ -1419,7 +1527,96 @@ ${projectDataContext}
     *   All **fiber** work falls on the **Phase 2** task.
 *   **Friday Backdating**: On Fridays, you must **back date** the production when Level 1 approving to the day before (Thursday), since Thursday is the end of the pay period.
 *   **Missing Projects**: If you attempt to assign a sub/tech to a project and cannot find the project, reach out to **Tillman Production** immediately to get the project entered ASAP.
+
+## SECTION 12: UTILITY LOCATE TICKET REQUESTS (NEW)
+*   **Purpose**: Standardized procedure for submitting utility locate requests in Tillman FTTH builds. Goal: Ensure all underground utilities are marked to prevent damage and ensure safety.
+*   **Roles & Responsibilities**:
+    *   **Vendor's Management**: Ensures complete/accurate tickets, tracks status, ensures safety compliance.
+    *   **Sub-Contractor**: Submits tickets, compliance with Tillman-USIC agreement.
+    *   **Construction Crew**: Adheres to markings, follows safety guidelines, reports discrepancies.
+    *   **Tillman PM**: Facilitates priority jobs and obstacles.
+*   **Required Information**:
+    *   Email Contacts, Project Affiliation ("Tillman Fiber"), Job Name (e.g., FB-HDH02A), Footage.
+    *   Detailed Site Info (street names, intersections), Work Type (boring, trenching), Excavation Method, Depth.
+    *   Proposed Start Date/Time, Point of Contact (name/phone).
+*   **Communication Protocol**:
+    *   **Subcontractors**: CANNOT contact locators for prioritization.
+    *   **Vendors**: Can communicate with USIC only to answer questions/resolve issues.
+    *   **Tillman Fiber**: ONLY Tillman has authority to request job prioritization.
+    *   Do NOT use terms like "Do not delay" or "High priority" on tickets.
+*   **Submission Guidelines**:
+    *   **Daisy Chain**: Build sequentially (1.1 -> 1.2 -> 1.3).
+    *   **Feeder**: Start from Active Cabinet.
+    *   **Logical Prioritization**: Follow network build progression.
+    *   **Batch Requests**: Submit multiple tickets for contiguous areas.
+*   **Procedure**:
+    *   **Step 1**: White line area. Contact One-Call (811) 1 week prior. Obtain ticket #.
+    *   **Step 2**: Verify ticket details. Maintain log (status/expiration). Ensure ticket remains valid.
+    *   **Step 3**: Distribute info to PM/Construction Manager. Ensure markings are in place. Pothole if discrepancies found.
+    *   **Step 4 (Compliance)**: Markings visible until completion. Close ticket with One-Call. Retain records.
+*   **Safety**:
+    *   PPE required (vest, gloves, boots).
+    *   Be aware of hazards (gas, HV lines).
+    *   **MANDATORY**: Potholing/physically identifying all marked utilities prior to drilling.
+*   **Rollback Plan**:
+    *   If locate is incorrect/incomplete: **HALT** excavation immediately.
+    *   Contact One-Call for emergency re-locate.
+    *   Notify Project Manager.
+
+## SECTION 13: INSPECTOR TRAINING & DAILY CHECKLIST
+*   **Purpose**: Guidance for consistent quality, safety, and documentation.
+*   **Responsibilities**: Ensure work meets safety standards, follows specs, documentation is accurate, report issues.
+*   **Daily Workflow**:
+    *   **Morning**: Review docs, verify PPE/equipment (Camera with Timestamp App, checklist, measuring tools), meet contractor, document starting conditions, verify permits/locates, site safety assessment.
+    *   **Mid-Day (10:00 AM)**: Complete first redline report, send to Supervisor, document progress.
+    *   **End-of-Day**: Verify work meets specs, site cleanup, final documentation, report issues to CM.
+*   **Walk Wheel Measurement Protocol (MANDATORY)**:
+    *   Walk wheeled by both supervisors and inspectors.
+    *   Completed page by page.
+    *   Document ALL DAP locations.
+    *   **Photos**: Wheel at 0 (start) and wheel at end measurement using Timestamp App.
+    *   **Deliverable**: Updated red line maps with correct footage, uploaded to "Walked out As-builts Maps" folder (project-specific subfolder).
+*   **Daily Inspection Checklist**:
+    *   **Safety**: Traffic cones, warning signs, PPE, safe parking, hazard check.
+    *   **Procedure**: Locates verified, video of entire job, "Before" photos, permits accessible, utilities potholed, pits verified at 3' depth.
+    *   **Redline**: Morning meeting, 10AM report, Toby boxes checked (2-way access/trace wire), DAP placement verified.
+    *   **QC & Restoration**: Drills use plywood, job briefing, site cleanup, restoration requirements met.
+*   **Common Issues**:
+    *   **Locate Delays**: Notify supervisor, document area, do not proceed without locates.
+    *   **Utility Conflicts**: Stop work, document, notify supervisor.
+    *   **Documentation**: Be thorough, take extra photos, use consistent naming, back up daily.
+
+## SECTION 14: TIMESTAMP CAMERA SETUP
+*   **Requirement**: Customize photo names based on project and sheet number.
+*   **Steps**:
+    1.  Click clock icon (bottom right).
+    2.  Click "Advanced".
+    3.  Click "File name format".
+    4.  Choose option starting with \`custom-input-text_\`.
+    5.  Return to main screen, click clock icon again.
+    6.  Click "Display custom text on camera".
+    7.  Input format: \`ProjectName-Sheet#\` (e.g., \`D-HDH60-Sheet5\`).
+*   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#_DateTime.jpg\`.
+
+## SECTION 15: IMPORTANT LINKS
+1.  **Tillman Project SharePoint**: [SharePoint](https://lightspeedconstructiongroup.sharepoint.com/sites/ClearwaterSupervisors/SitePages/ProjectHome.aspx)
+2.  **Project Summary Data**: [Project Summary](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
+3.  **Locate Ticket Tracker**: [Locate Tracker](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/EdvfutoSOu1GjODYhk1aFEkBbm3WQj1UA2VCNUdg71tj3Q?e=0eslHQ&web=1)
+4.  **Restoration Tracker**: [Restoration Tracker](https://lightspeedconstructiongroup-my.sharepoint.com/:x:/g/personal/betsy_montero_lscg_com/EbghxuQJnjRNucEyZM0IyyQB3FgqYjmPNcwh3KO4UXYYSw?e=ZJzShy&nav=MTVfezAwMDAwMDAwLTAwMDEtMDAwMC0wMDAwLTAwMDAwMDAwMDAwMH0)
+5.  **Project Dashboard**: [Dashboard](https://jckraus1.github.io/Tillman-Dashboard/Tillman%20Dashboard.html)
+6.  **Share Drive (Maps/Docs)**: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
+7.  **Sunshine 811 (Locate Tickets)**: [Sunshine 811](https://exactix.sunshine811.com/login)
+8.  **Sunshine 811 Training**: [Sunshine 811 Training](https://sunshine811.com/full-ite-access)
+9.  **Penguin Data (Billing)**: [Penguin Data](https://fullcircle.penguindata.com/login)
+10. **OneStepGPS (Vehicle Tracking)**: [OneStepGPS](https://track.onestepgps.com/v3/auth/login?r=https://track.onestepgps.com/v3/ux/map)
+
+## SECTION 16: MANDATORY LINKING RULES
+*   **Contractor Invoicing**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
+*   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
+*   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
+*   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
 `;
+
       
       const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
@@ -1434,14 +1631,22 @@ CRITICAL INSTRUCTIONS:
 2.  **IF PROJECT DATA IS ONLINE**: Use the "LIVE PROJECT DATA" section to answer.
 3.  **Real-Time Data**: You have access to Google Search and Google Maps tools. Use them to find current weather, verify location data, or look up recent news affecting construction.
 4.  **Geolocation**: If the user asks about "this area" or "local weather", use the provided latitude/longitude in the tool config.
-5.  **Procedures**: Always use the knowledge base for procedure questions.
-6.  **No Hallucinations**: NEVER invent project details.
+5.  **Procedures**: Always use the knowledge base for procedure questions (BOM, NTP, Safety, etc.) regardless of data status.
+6.  **No Hallucinations**: NEVER invent project details. If a project isn't in the list, say so.
 7.  **Tone**: Professional but friendly.
-8.  **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant.
+8.  **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant. **Do not start every response by stating your name. Only state it if asked.**
 9.  **Linking**: You MUST use Markdown [Title](URL) for links.
 10. **Locate Tickets Formatting**: When asked for locate tickets, you **MUST** use the following specific bulleted format for every ticket:
     *   **Tickets:** [Ticket Number], Phone: [Phone Number], Status: [Status], Due: [Due Date], Expires: [Expire Date]
-11. **Rate Cards**: When asked about rates, **ALWAYS clarify which rate card you are referencing**: either the "Tillman Fiber Standard Rate Card (v1.1)" OR the "Lightspeed Subcontractor Rate Card (Revised 2025)". The rates are DIFFERENT.
+11. **Rate Cards**: Distinguish between the "Standard Rate Card" (Internal) and "Subcontractor Rate Card" (External). If a user asks for a rate, check both and clarify the difference.
+12. **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
+13. **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
+14. **New Data Fields**: 
+    *   **HHP**: Refers to "Serviceable Addresses" or "Households Passed".
+    *   **SOW Estimated Cost**: The estimated cost for the project.
+    *   **On Track or In Jeopardy**: The health status of the project.
+15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
+16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
