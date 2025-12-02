@@ -419,7 +419,7 @@ const TillmanKnowledgeAssistant = () => {
                             // Helper to determine if a key is potentially a ticket number column
                             const isTicketKey = (k: string) => {
                                 if (forbiddenTerms.some(term => k.includes(term))) return false;
-                                return k.includes('ticket') || k.includes('locate');
+                                return k.includes('ticket') || k.includes('locate') || k.includes('tic');
                             };
 
                             // Find all potential ticket columns
@@ -814,7 +814,8 @@ const TillmanKnowledgeAssistant = () => {
                     .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
                     .join(', ');
                  const fields = [];
-                 if (ticketNums) fields.push(`Tickets: [${ticketNums}]`);
+                 // Removed brackets [] from ticket numbers display
+                 if (ticketNums) fields.push(`Tickets: ${ticketNums}`);
                  if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
                  if (l.status && String(l.status).trim() !== '') fields.push(`Status: ${l.status}`);
                  if (l.dueDate && String(l.dueDate).trim() !== '') fields.push(`Due: ${l.dueDate}`);
@@ -1086,7 +1087,6 @@ ${projectDataContext}
     *   TCSS4 Splicing - Cable Only-Splice Fiber Optic Ribbon Cable >96 fibers: $12.00/EA
     *   TCSS8 Splicing - Waste water removal: $75.00/EA
     *   TCSS9 Splicing - Prep, Splice and Place Terminal Closure (Primary and Secondary) Ribbon Cable <= 12 Fibers: $194.00/EA
-    *   TCSS11 Splicing - Prep, Splice and Place Terminal Closure (Primary and Secondary) loose tube Cable <=12 Fibers (Per EA): $115.00
     *   TCSSM Splicing - Splice Micro Duct at Lateral: $6.00/EA
     *   TCSSMD Splicing - Splice Micro Duct at Duct Access Point (DAP): $6.00/EA
 
@@ -1412,6 +1412,7 @@ ${projectDataContext}
 *   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
 `;
 
+      
       const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
@@ -1441,10 +1442,10 @@ CRITICAL INSTRUCTIONS:
     *   **On Track or In Jeopardy**: The health status of the project.
 15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
 16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
-17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
+17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** If you need to perform calculations on multiple numbers provided in the text (like summing project footages), you MUST perform the addition step-by-step to ensure accuracy.
 18. **Data Sources**:
     *   **Footage Data**: STRICTLY derived from the "Footage Remaining" column in the project file. If empty, fall back to "Footage UG". NEVER use footage data from locate tickets.
-    *   **Locate Tickets**: Sourced from the locate tickets file. You must output the Ticket Number provided in the data. If the data says [Tickets: ...], output those numbers.
+    *   **Locate Tickets**: Sourced from the locate tickets file. You must output the Ticket Number provided in the data. If the data says "Tickets: 324501377", output that number.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
