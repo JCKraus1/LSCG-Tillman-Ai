@@ -6,6 +6,11 @@
   <title>Nexus - LSCG Tillman Assistant</title>
   <meta name="description" content="Nexus: Voice-enabled AI assistant for Tillman Fiber and Lightspeed Construction procedures and project data">
   
+  <!-- PWA Manifest & Theme -->
+  <link rel="manifest" href="./manifest.json">
+  <meta name="theme-color" content="#000000">
+  <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/4712/4712027.png">
+  
   <!-- Favicon -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
   
@@ -87,6 +92,20 @@
   <div id="root"></div>
   <!-- Load index.tsx using Babel -->
   <script type="text/babel" data-type="module" src="./index.tsx" data-presets="react,typescript"></script>
-<script type="module" src="/index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+  
+  <!-- PWA Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+          .then(registration => {
+            console.log('✅ ServiceWorker registration successful with scope: ', registration.scope);
+          }, err => {
+            console.log('❌ ServiceWorker registration failed: ', err);
+          });
+      });
+    }
+  </script>
 </body>
 </html>

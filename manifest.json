@@ -1,0 +1,22 @@
+{
+  "name": "Nexus - LSCG Tillman Assistant",
+  "short_name": "Nexus",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#f3f4f6",
+  "theme_color": "#000000",
+  "orientation": "portrait-primary",
+  "description": "Voice-enabled AI assistant for Tillman Fiber construction projects.",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4712/4712027.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/4712/4712027.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
