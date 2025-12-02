@@ -1594,7 +1594,6 @@ ${projectDataContext}
 *   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
 *   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
 *   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
-17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
 `;
 
       const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
