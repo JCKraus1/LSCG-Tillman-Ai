@@ -1519,7 +1519,7 @@ ${projectDataContext}
         5. Click on the created work shift form to enter all remaining information.
 *   **Submission**: Your redlines and all other information combined in one zip file should be sent to **Tillman Production**.
 
-## SECTION 11: PRODUCTION SUBMISSION & APPROVAL
+## SECTION 11: SUB CONTRACTOR INVOICING & PRODUCTION SUBMISSION & APPROVAL
 *   **Daily Submission**: Production should be submitted daily so it can be Level 1 and 2 approved daily. If it is not, we cannot guarantee that all production will be Level 2 approved by the pay close cut off.
 *   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, has been uploaded onto the task on the FORMS tab.
 *   **Task Assignment**:

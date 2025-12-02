@@ -166,6 +166,7 @@ const TillmanKnowledgeAssistant = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState<string>('');
+  const [language, setLanguage] = useState<'en' | 'es'>('en');
   
   // Geolocation State
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -279,6 +280,33 @@ const TillmanKnowledgeAssistant = () => {
     };
   }, []);
 
+  // Handle Language Change Effects
+  useEffect(() => {
+    // 1. Update Speech Recognition Language
+    if (recognitionRef.current) {
+        recognitionRef.current.lang = language === 'es' ? 'es-MX' : 'en-US';
+    }
+
+    // 2. Auto-switch voice if current voice doesn't match language
+    if (availableVoices.length > 0) {
+        const currentVoice = availableVoices.find(v => v.name === selectedVoiceName);
+        const isMatch = currentVoice?.lang.toLowerCase().includes(language === 'es' ? 'es' : 'en');
+        
+        if (!isMatch) {
+            // Find best match for new language
+            const newVoice = availableVoices.find(v => v.lang.toLowerCase().includes(language === 'es' ? 'es' : 'en'));
+            if (newVoice) {
+                setSelectedVoiceName(newVoice.name);
+                // Announce language change
+                synthRef.current.cancel();
+                const utterance = new SpeechSynthesisUtterance(language === 'es' ? "Idioma cambiado a Español" : "Language switched to English");
+                utterance.voice = newVoice;
+                synthRef.current.speak(utterance);
+            }
+        }
+    }
+  }, [language, availableVoices]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, showDashboard, showAnalytics]);
@@ -297,7 +325,7 @@ const TillmanKnowledgeAssistant = () => {
     
     // Test the voice
     synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance("Voice updated. I am Nexus.");
+    const utterance = new SpeechSynthesisUtterance(language === 'es' ? "Voz actualizada. Soy Nexus." : "Voice updated. I am Nexus.");
     const voiceObj = availableVoices.find(v => v.name === newVoice);
     if (voiceObj) utterance.voice = voiceObj;
     synthRef.current.speak(utterance);
@@ -1415,6 +1443,12 @@ ${projectDataContext}
       
       const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
+      // Add Language instruction modification here
+      let languageInstruction = '';
+      if (language === 'es') {
+          languageInstruction = `\n\nCRITICAL LANGUAGE INSTRUCTION: The user has selected SPANISH language. You MUST answer all questions in Spanish (Español). Translate your knowledge base information, procedures, and conversational responses into Spanish. HOWEVER, you must keep specific technical identifiers exactly as they appear in the source data (e.g. "NTP Number", "BOM", "SOW", Ticket Numbers like "324501377", Project IDs). Do not translate the technical acronyms themselves, but explain them in Spanish if needed.`;
+      }
+
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
 Current Date: ${currentDate}
 
@@ -1442,10 +1476,12 @@ CRITICAL INSTRUCTIONS:
     *   **On Track or In Jeopardy**: The health status of the project.
 15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
 16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
-17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** If you need to perform calculations on multiple numbers provided in the text (like summing project footages), you MUST perform the addition step-by-step to ensure accuracy.
+17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
 18. **Data Sources**:
     *   **Footage Data**: STRICTLY derived from the "Footage Remaining" column in the project file. If empty, fall back to "Footage UG". NEVER use footage data from locate tickets.
     *   **Locate Tickets**: Sourced from the locate tickets file. You must output the Ticket Number provided in the data. If the data says "Tickets: 324501377", output that number.
+
+${languageInstruction}
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
@@ -1530,6 +1566,15 @@ ${knowledgeBase}`;
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button 
+                onClick={() => {
+                   setLanguage(prev => prev === 'en' ? 'es' : 'en');
+                }}
+                className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all flex items-center gap-1"
+                title={language === 'en' ? "Switch to Spanish" : "Cambiar a Inglés"}
+            >
+                {language === 'en' ? '🇺🇸 EN' : '🇲🇽 ES'}
+            </button>
             <button 
                 onClick={() => { setShowAnalytics(!showAnalytics); setShowDashboard(false); }} 
                 className={`p-2 rounded-full transition-all ${showAnalytics ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
@@ -1691,7 +1736,7 @@ ${knowledgeBase}`;
                   <div className="mt-2 flex items-center gap-3 no-print">
                       <button onClick={() => speakText(message.content)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                        Read aloud
+                        {language === 'es' ? "Leer en voz alta" : "Read aloud"}
                       </button>
                   </div>
                 )}
@@ -1723,7 +1768,7 @@ ${knowledgeBase}`;
               )}
             </button>
             <div className="flex-1 relative">
-              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? "Listening..." : "Type your question or click the microphone to speak..."} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
+              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? (language === 'es' ? "Escuchando..." : "Listening...") : (language === 'es' ? "Escribe tu pregunta o habla..." : "Type your question or click the microphone to speak...")} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
             </div>
             <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none" title="Send message">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
@@ -1732,14 +1777,14 @@ ${knowledgeBase}`;
           {isListening && (
             <p className="text-sm text-red-600 mt-2 flex items-center gap-2 animate-pulse justify-center sm:justify-start">
               <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-              Listening... Speak your question now
+              {language === 'es' ? "Escuchando... Di tu pregunta ahora" : "Listening... Speak your question now"}
             </p>
           )}
           {isSpeaking && (
             <div className="mt-2 flex items-center justify-between">
               <p className="text-sm text-blue-600 flex items-center gap-2">
                 <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                Speaking response...
+                {language === 'es' ? "Hablando..." : "Speaking response..."}
               </p>
               <button onClick={stopSpeaking} className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
@@ -1753,7 +1798,7 @@ ${knowledgeBase}`;
       {/* Footer */}
       <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
         <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap text-center">
-          <span>💡 Ask about procedures, weather, rates, or live project data</span>
+          <span>{language === 'es' ? "💡 Pregunta sobre procedimientos, clima, tarifas o datos del proyecto" : "💡 Ask about procedures, weather, rates, or live project data"}</span>
           <span className="hidden sm:inline">•</span>
           <span>🎤 Voice works in Chrome & Edge</span>
         </div>

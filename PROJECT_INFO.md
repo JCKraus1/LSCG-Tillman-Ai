@@ -41,7 +41,7 @@ The application fetches data directly from GitHub-hosted Excel files.
 *   Basic React app with Gemini integration.
 *   Added PDF/Text knowledge base processing.
 
-### Update: Locate Ticket & Math Fixes (Current)
+### Update: Locate Ticket & Math Fixes
 *   **Issue**: AI was calculating wrong footage totals and missing ticket numbers.
 *   **Fixes**:
     *   Implemented `parseFootage` helper to sanitize numerical inputs.
@@ -49,6 +49,13 @@ The application fetches data directly from GitHub-hosted Excel files.
     *   Explicitly removed `footage` property from parsed locate tickets to force AI to use Project data.
     *   Widened column detection logic for Locate Ticket numbers to ensure they appear in the prompt context.
     *   Updated System Instruction to enforce listing specific ticket numbers.
+
+### Update: Spanish Language Support (Current)
+*   **Features**:
+    *   Added **EN | ES** toggle in the header.
+    *   **System Instruction**: Dynamically injects instructions for the AI to translate responses into Spanish while preserving technical data structure (NTPs, ticket numbers).
+    *   **Speech-to-Text**: Updates `recognition.lang` to `es-MX` when Spanish is selected.
+    *   **Text-to-Speech**: Auto-switches to a Spanish voice for reading responses aloud.
 
 ## Maintenance Notes
 *   **API Key**: Injected via `process.env.API_KEY` (handled via `index.html` for GitHub Pages).
