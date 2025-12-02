@@ -15,6 +15,14 @@ declare global {
   }
 }
 
+// Helper to safely parse footage numbers
+const parseFootage = (val: any): number => {
+  if (val === undefined || val === null) return 0;
+  const str = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '').trim();
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+};
+
 // --- Data Visualization Component ---
 const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
   if (!projectData || projectData.length === 0) return null;
@@ -40,7 +48,7 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
     if (rawFootage === undefined || rawFootage === null || String(rawFootage).trim() === '') {
         rawFootage = p['Footage UG'];
     }
-    const footage = parseFloat(String(rawFootage || '0').replace(/,/g, '')) || 0;
+    const footage = parseFootage(rawFootage);
     marketFootage[market] = (marketFootage[market] || 0) + footage;
   });
 
@@ -468,7 +476,7 @@ const TillmanKnowledgeAssistant = () => {
                                 escalated: normalizedRow['date escalated'] || '',
                                 status: normalizedRow['ticket status'] || normalizedRow['status'] || '',
                                 completed: normalizedRow['date ticket completed'] || normalizedRow['date completed'] || '',
-                                footage: normalizedRow['footage'] || '', // We parse it but will not display it in AI context
+                                // NOTE: We explicitly DO NOT include footage from locate sheet to avoid calculations errors.
                                 notes: normalizedRow['notes'] || normalizedRow['comments'] || '',
                             };
                             locateMap[key].push(ticketData);
@@ -775,7 +783,7 @@ const TillmanKnowledgeAssistant = () => {
             if (val === undefined || val === null || String(val).trim() === '') {
                 val = p['Footage UG'];
             }
-            const footage = parseFloat(String(val || '0').replace(/,/g, '')) || 0;
+            const footage = parseFootage(val);
             return sum + footage;
           }, 0);
           
@@ -1145,148 +1153,6 @@ ${projectDataContext}
     *   TCHR53 Supervisor - Over Time Rate: $120.00/HR
     *   TCHR54 Supervisor - Natural Disaster Rate Outside Market Radius: $145.00/HR
     *   TCHR55 Supervisor - Natural Disaster Rate Within Market Radius: $125.00/HR
-    *   TCHR61 Per Diem Rate - Natural Disaster Outside Market Radius: $172.00/Day
-    *   TCHR62 Hourly Equipment Rate - traffic barrel - Normal Rate: $6.00/HR
-    *   TCHR63 Daily Equipment Rate - traffic barrel - Normal Rate: $20.00/DAY
-    *   TCHR64 Weekly Equipment Rate - traffic barrel - Normal Rate: $95.00/WK
-    *   TCHR65 Hourly Equipment Rate - work zone sign - Normal Rate: $6.00/HR
-    *   TCHR66 Daily Equipment Rate - work zone sign - Normal Rate: $28.00/DAY
-    *   TCHR67 Weekly Equipment Rate – work zone sign - Normal Rate: $95.00/WK
-    *   TCHR68 Hourly Equipment Rate - traffic cones - Normal Rate: $3.00/HR
-    *   TCHR69 Hourly Equipment Rate - traffic cones - Over time Rate: $5.00/HR
-    *   TCHR70 Daily Equipment Rate – traffic cones - Normal Rate: $20.00/DAY
-    *   TCHR71 Daily Equipment Rate – traffic cones - Over time Rate: $20.00/DAY
-    *   TCHR72 Weekly Equipment Rate – traffic cones - Normal Rate: $100.00/WK
-    *   TCHR73 Daily Equipment Rate - steel plate - Normal Rate: $125.00/DY
-    *   TCHR74 Weekly Equipment Rate - steel plate - Normal Rate: $120.00/WK
-    *   TCHR75 Monthly Equipment Rate - steel plate - Normal Rate: $250.00/MO
-    *   TCHR76 Hourly Vehicle rate - large vehicle - Normal Rate: $100.00/HR
-    *   TCHR77 Hourly Vehicle Rate - medium vehicle - Normal Rate: $75.00/HR
-    *   TCHR78 Hourly Vehicle Rate - small vehicle - Normal Rate: $40.00/HR
-    *   TCHR79 Hourly Equipment Rate - large equipment - Normal Rate: $125.00/HR
-    *   TCHR80 Hourly Equipment Rate - medium equipment - Normal Rate: $100.00/HR
-    *   TCHR81 Hourly Equipment Rate - Small Equipment (Other) - Normal Rate: $95.00/HR
-    *   TCHR82 Hourly Equipment Rate - small mechanical equipment (hand-held) - Normal Rate: $35.00/HR
-    *   TCHR83 Daily Equipment Rate - concrete barriers - Normal Rate: $75.00/DY
-    *   TCHR84 Weekly Equipment Rate - concrete barrier - Normal Rate: $65.00/WK
-    *   TCHR85 Monthly Equipment Rate - concrete barrier - Normal Rate: $270.00/MO
-    *   TCMU Material Mark-up: 5%
-
-## SECTION 6B: LIGHTSPEED SUBCONTRACTOR RATE CARD (Tillman Fiber 2024 - Revised 1/31/2025)
-*   **Aerial**:
-    *   TCA1 Place Aerial - Strand 6M to 6.6M (Per FT): $0.55
-    *   TCA1A Place Aerial-Anchor and Rod-Mechanical (Per EA): $30.00
-    *   TCA1B Place Aerial-Anchor and Rod-Hand-Dig (Per EA): $30.00
-    *   TCA2 Place Aerial - Stand 10M to 25M (Per FT): $0.70
-    *   TCA3 Place Aerial - Self-support fiber (Per FT): $0.80
-    *   TCA4 Place Aerial - Self-support flexible duct (Per FT): $0.90
-    *   TCA5 Place Aerial - Total Bundle for route < 2500' (Per FT): $0.70
-    *   TCA6 Place Aerial - Total Bundle for route >5000' (Per FT): $0.65
-    *   TCA7 Place Aerial - Total Bundle for route < 5000' (Per FT): $0.60
-
-*   **Buried - Directional Bore**:
-    *   TCBDB2 Place Buried - directional bore - standard - up to 4.0" outside diameter bundle (Per FT): $7.00
-    *   TCBDB4 Place Buried - directional bore - standard - over 4.0" to 7.0" outside diameter bundle (Per FT): $9.00
-    *   TCBDB8 Place Buried - directional bore - rock - up to 4.0" outside diameter bundle (Per FT): $15.00
-    *   TCBDB9 Place Buried - directional bore - rock - over 4.0" to 7.0" outside diameter bundle (Per FT): $17.00
-
-*   **Buried - Hand Dig**:
-    *   TCBHD1 Place Buried - 6" cover - hand dig (Per FT): $2.70
-    *   TCBHD2 Place Buried - 7" through 12" cover - hand dig (Per FT): $3.30
-    *   TCBHD3 Place Buried - 12" through 18" cover - hand dig (Per FT): $3.90
-    *   TCBHD4 Place Buried - 19" through 24" cover - hand dig (Per FT): $4.00
-    *   TCBHD5 Place Buried - 25" through 36" cover - hand dig (Per FT): $4.25
-    *   TCBHD6 Place Buried - 37" through 48" cover - hand dig (Per FT): $4.50
-    *   TCBHD7 Place Buried - add'l depth in 6" increments - hand dig (Per FT): $0.50
-
-*   **Buried - Missile Bore**:
-    *   TCBMB1 Place Buried - missile bore - up to 4.0" outside diameter bundle (Per FT): $5.50
-    *   TCBMB2 Place Buried - missile bore - over 4.0" to 7.0" outside diameter bundle (Per FT): $7.50
-
-*   **Buried - Mechanical**:
-    *   TCBP1 Place Buried - 6" cover - mechanical (Per FT): $1.50
-    *   TCBP2 Place Buried - 7" through 12" cover - mechanical (Per FT): $1.65
-    *   TCBP3 Place Buried - 12" through 18" cover - mechanical (Per FT): $1.75
-    *   TCBP4 Place Buried - 19" through 24" cover - mechanical (Per FT): $1.85
-    *   TCBP5 Place Buried - 25" through 36" cover - mechanical (Per FT): $1.95
-    *   TCBP6 Place Buried - 37" through 48" cover - mechanical (Per FT): $2.50
-    *   TCBP7 Place Buried - add'l depth in 6" increments mechanical (Per FT): $0.50
-
-*   **Buried Service Wire (BSW)**:
-    *   TCBSW3 Place BSW - buried service drop and duct-pull (Per FT): $0.80
-    *   TCBSW4 Place BSW - buried service drop in duct-pull method (Per FT): $0.50
-    *   TCBSW4B Place BSW - buried service drop in duct-blowing method (Per FT): $0.70
-    *   TCBSW5 Place BSW - buried service drop or microduct (Per FT): $0.75
-    *   TCBSW6 Place BSW - rod and place pull tape in innerduct for BSW (Per FT): $0.50
-    *   TCBSW7 Place BSW - Rod and slug innerduct for BSW (Per FT): $0.75
-    *   TCBSW8 Place BSW - Locate conduit end for BSW (Per FT): $0.18
-    *   TCBSW9 Place BSW - handhole associated with One Fiber BSW (Per EA): $75.00
-    *   TCBSW10 Place BSW - each additional drop same trench (Per FT): $0.20
-    *   TCBSW11 Place BSW - additional innerduct up to 2 inches (Per FT): $0.75
-    *   TCBSW12 Place BSW - each additional drop in innerduct (Per FT): $0.75
-    *   TCBSW13 Place BSW - road/driveway bore/pull (drop) (Per FT): $8.00
-    *   TCBSW14 Place BSW - bore - each additional innerduct (Per FT): $0.75
-    *   TCBSW15 Place BSW - each buried drop facility in open path/trench (Per FT): $0.30
-    *   TCBSW16 BSW - intercept existing duct (Per EA): $30.00
-    *   TCBSW17 Trip charge - BSW - Single/Individual rate (Per EA): $33.00
-    *   TCBSW18 Trip charge - BSW - Crew rate (Per EA): $147.00
-
-*   **Electronics**:
-    *   TCE1 Electronics-Perform all steps of placing, testing and turnup of the OLT -Cabinet. (Per LOC): $450.00
-    *   TCE2 Electronics-Perform all steps of placing, testing and turnup of the OLT -Clam Shell. (Per LOC): $372.00
-    *   TCE3 Electronics-Perform all steps of placing, testing and turnup of the OLT -Strand. (Per LOC): $234.00
-
-*   **Hourly / Restoration**:
-    *   TCHR1 CDL Truck Driver - Differential Rate (Per HR): $36.00
-    *   TCHR2 CDL Truck Driver - Normal Rate (Per HR): $30.00
-    *   TCHR3 CDL Truck Driver - Over Time Rate (Per HR): $45.00
-    *   TCHR4 CDL Truck Driver - Natural Disaster Rate Outside Market Radius (Per HR): $54.00
-    *   TCHR5 CDL Truck Driver - Natural Disaster Rate Within Market Radius (Per HR): $57.00
-    *   TCHR6 Electrician - Differential Rate (Per HR): $72.00
-    *   TCHR7 Electrician - Normal Rate (Per HR): $54.00
-    *   TCHR8 Electrician - Over Time Rate (Per HR): $81.00
-    *   TCHR9 Electrician - Natural Disaster Rate Outside Market Radius (Per HR): $105.00
-    *   TCHR10 Electrician - Natural Disaster Rate Within Market Radius (Per HR): $93.00
-    *   TCHR11 Flagger - Differential Rate (Per HR): $21.00
-    *   TCHR12 Flagger - Normal Rate (Per HR): $24.00
-    *   TCHR13 Flagger - Over Time Rate (Per HR): $36.00
-    *   TCHR14 Flagger - Natural Disaster Rate Outside Market Radius (Per HR): $45.00
-    *   TCHR15 Flagger - Natural Disaster Rate Within Market Radius (Per HR): $39.00
-    *   TCHR16 General Laborer - Differential Rate (Per HR): $30.00
-    *   TCHR17 General Laborer - Normal Rate (Per HR): $24.00
-    *   TCHR18 General Laborer - Over Time Rate (Per HR): $33.00
-    *   TCHR19 General Laborer - Natural Disaster Rate Outside Market Radius (Per HR): $45.00
-    *   TCHR20 General Laborer - Natural Disaster Rate Within Market Radius (Per HR): $39.00
-    *   TCHR21 Journey Man - Differential Rate (Per HR): $66.00
-    *   TCHR22 Journey Man - Normal Rate (Per HR): $60.00
-    *   TCHR23 Journey Man - Over Time Rate (Per HR): $90.00
-    *   TCHR24 Journey Man - Natural Disaster Rate Outside Market Radius (Per HR): $114.00
-    *   TCHR25 Journey Man - Natural Disaster Rate Within Market Radius (Per HR): $90.00
-    *   TCHR26 Lineman - Differential Rate (Per HR): $45.00
-    *   TCHR27 Lineman - Normal Rate (Per HR): $42.00
-    *   TCHR28 Lineman - Over Time Rate (Per HR): $63.00
-    *   TCHR29 Lineman - Natural Disaster Rate Outside Market Radius (Per HR): $99.00
-    *   TCHR30 Lineman - Natural Disaster Rate Within Market Radius (Per HR): $69.00
-    *   TCHR31 Machine Operator - Differential Rate (Per HR): $42.00
-    *   TCHR32 Machine Operator - Normal Rate (Per HR): $36.00
-    *   TCHR33 Machine Operator - Over Time Rate (Per HR): $51.00
-    *   TCHR34 - Natural Disaster Rate Outside Market Radius (Per HR): $87.00
-    *   TCHR35 - Natural Disaster Rate Within Market Radius (Per HR): $69.00
-    *   TCHR41 Skilled Laborer - Differential Rate (Per HR): $40.80
-    *   TCHR42 Skilled Laborer - Normal Rate (Per HR): $36.00
-    *   TCHR43 Skilled Laborer - Over Time Rate (Per HR): $51.00
-    *   TCHR44 Skilled Laborer - Natural Disaster Rate Outside Market Radius (Per HR): $69.00
-    *   TCHR45 Skilled Laborer - Natural Disaster Rate Within Market Radius (Per HR): $54.00
-    *   TCHR46 Splicer - Differential Rate (Per HR): $54.00
-    *   TCHR47 Splicer - Normal Rate (Per HR): $48.00
-    *   TCHR48 Splicer - Over Time Rate (Per HR): $69.30
-    *   TCHR49 Splicer - Natural Disaster Rate Outside Market Radius (Per HR): $96.00
-    *   TCHR50 Splicer - Natural Disaster Rate Within Market Radius (Per HR): $75.00
-    *   TCHR51 Supervisor - Differential Rate (Per HR): $60.00
-    *   TCHR52 Supervisor - Normal Rate (Per HR): $51.00
-    *   TCHR53 Supervisor - Over Time Rate (Per HR): $72.00
-    *   TCHR54 Supervisor - Natural Disaster Rate Outside Market Radius (Per HR): $87.00
-    *   TCHR55 Supervisor - Natural Disaster Rate Within Market Radius (Per HR): $75.00
     *   TCHR61 Per Diem Rate - Natural Disaster Outside Market Radius (Per DAY): $103.00
     *   TCHR62 Hourly Equipment Rate - traffic barrel - Normal Rate (Per HR): $3.50
     *   TCHR63 Daily Equipment Rate - traffic barrel - Normal Rate (Per DAY): $12.00
@@ -1312,56 +1178,6 @@ ${projectDataContext}
     *   TCHR83 Daily Equipment Rate - concrete barriers - Normal Rate (Per DAY): $45.00
     *   TCHR84 Weekly Equipment Rate - concrete barrier - Normal Rate (Per WK): $39.00
     *   TCHR85 Monthly Equipment Rate - concrete barrier - Normal Rate (Per MO): $162.00
-
-*   **Maintenance**:
-    *   TCM7 Maintain Buried - straighten, raise, or lower handhole-all sizes (Per EA): $100.00
-    *   TCM8 Maintain Buried - dig and backfill splice pit up to 30 cu. ft. (Per EA): $170.00
-    *   TCM9 Maintain Buried - dig and backfill splice pit over 30 to 60 cu. ft. (Per EA): $225.00
-    *   TCM10 Maintain Buried - dig and backfill splice pit over 60 cu. ft. (Per CUFT): $5.00
-    *   TCM11 Maintain Buried - Pothole existing buried facilities (Per EA): $50.00
-    *   TCM12 Maintain Buried - Replace flowerpot or handhole lid - all sizes (Per EA): $24.00
-    *   TCM13 Move Charge - Buried (Per EA): $125.00
-    *   TCM14 Place Buried - select backfill (Per CU.FT.): $2.50
-
-*   **Buried Misc**:
-    *   TCMB1 Place Buried - drop wire terminal (Per EA): $28.00
-    *   TCMB2 Place Buried - flowerpot (Per EA): $30.00
-    *   TCMB3A Place Buried - handhole 13x24x18 (Per EA): $70.00
-    *   TCMB3B Place Buried - handhole 17x30x24 (Per EA): $140.00
-    *   TCMB3C Place Buried - handhole 24x36x24 (Per EA): $155.00
-    *   TCMB4 Place Buried - handhole 30x48x36 (Per EA): $250.00
-    *   TCMB5 Place Buried - locate wire - primary function (Per FT): $0.55
-    *   TCMB6 Place Buried - locate wire in duct - primary function (Per FT): $0.30
-    *   TCMB7 Place Buried - locate wire and/or locate wire in duct - secondary function (Per FT): $0.20
-    *   TCMB8 Place Buried - ground rod - primary function (Per EA): $25.00
-    *   TCMB9 Place Buried - ground rod system - primary function (Per EA): $48.00
-    *   TCMB10 Place Buried - ground wire (Per FT): $1.00
-    *   TCMB11 Place Buried - Ground Rod - secondary function (Per EA): $18.00
-    *   TCMB12 Relocate Buried - existing buried facilities (Per FT): $2.50
-    *   TCMB13 Intercept Buried - encased conduit (concrete) (Per EA): $200.00
-    *   TCMB14 Intercept Buried - conduit (Per FT): $1.75
-    *   TCMB15 Locate Buried - conduit end (Per EA): $55.00
-    *   TCMB16 Place Buried - asphalt in 6" depth increments (Per SQ.FT.): $10.00
-    *   TCMB17 Place Buried - concrete in 6" depth increments (Per SQ.FT.): $12.50
-    *   TCMB19 Place Buried - Formed concrete (Per CU.YD.): $17.00
-    *   TCMB20 Place Buried - Unformed concrete (Per CU.YD.): $18.00
-    *   TCMB21 Place Buried - dowel concrete (Per EA): $20.00
-    *   TCMB22 Place Buried - core bore-manhole (Per EA): $180.00
-    *   TCMB23 Place Buried - core bore-building entrance (Per EA): $115.00
-    *   TCMB24 Place Buried - pull line-all types (Per FT): $0.18
-    *   TCMB25 Place Buried - 6x6 post (Per EA): $19.00
-    *   TCMB26 Place Buried - remote OLT Node in Optmius Pedestal (Per EA): $85.00
-    *   TCMB27 Place Buried - power meter base (Per EA): $70.00
-    *   TCMB28 Place Buried - alpha power cabinet (Per EA): $180.00
-    *   TCMB29 Place Buried - OLT cabinet (Per EA): $230.00
-    *   TCMB30 Place Buried - equipment and pad up to 10 sq. ft. (Per EA): $850.00
-    *   TCMB31 Place Buried - equipment and pad over 10 to 30 sq. ft. (Per EA): $1,000.00
-    *   TCMB32 Place Buried - equipment and pad over 30 to 50 sq. ft. (Per EA): $1,600.00
-    *   TCMB33 Place Buried - equipment and pad over 50 to 100 sq. ft. (Per EA): $2,000.00
-    *   TCMB34 Place Buried - concrete pad up to 10 sq. ft. (Per EA): $240.00
-    *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft. (Per EA): $500.00
-    *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft. (Per EA): $850.00
-    *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft. (Per EA): $1,150.00
 
 *   **MDU / Specialized**:
     *   TEMDU-011 MDU MEETINGS (Per HR): $50.00
@@ -1625,6 +1441,10 @@ CRITICAL INSTRUCTIONS:
     *   **On Track or In Jeopardy**: The health status of the project.
 15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
 16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
+17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
+18. **Data Sources**:
+    *   **Footage Data**: STRICTLY derived from the "Footage Remaining" column in the project file. If empty, fall back to "Footage UG". NEVER use footage data from locate tickets.
+    *   **Locate Tickets**: Sourced from the locate tickets file. You must output the Ticket Number provided in the data. If the data says [Tickets: ...], output those numbers.
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
