@@ -15,6 +15,14 @@ declare global {
   }
 }
 
+// Helper to safely parse footage numbers
+const parseFootage = (val: any): number => {
+  if (val === undefined || val === null) return 0;
+  const str = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '').trim();
+  const num = parseFloat(str);
+  return isNaN(num) ? 0 : num;
+};
+
 // --- Data Visualization Component ---
 const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
   if (!projectData || projectData.length === 0) return null;
@@ -33,9 +41,14 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
     const status = p['On Track or In Jeopardy'] || 'Unknown';
     statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-    // Footage by Market
+    // Footage by Market - Updated to prefer Footage Remaining as per user request
     const market = p['Market'] || 'General';
-    const footage = parseFloat(String(p['Footage UG'] || '0').replace(/,/g, '')) || 0;
+    // Check for Footage Remaining first, fallback to Footage UG
+    let rawFootage = p['Footage Remaining'];
+    if (rawFootage === undefined || rawFootage === null || String(rawFootage).trim() === '') {
+        rawFootage = p['Footage UG'];
+    }
+    const footage = parseFootage(rawFootage);
     marketFootage[market] = (marketFootage[market] || 0) + footage;
   });
 
@@ -153,6 +166,7 @@ const TillmanKnowledgeAssistant = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceName, setSelectedVoiceName] = useState<string>('');
+  const [language, setLanguage] = useState<'en' | 'es'>('en');
   
   // Geolocation State
   const [userLocation, setUserLocation] = useState<{lat: number, lng: number} | null>(null);
@@ -266,6 +280,33 @@ const TillmanKnowledgeAssistant = () => {
     };
   }, []);
 
+  // Handle Language Change Effects
+  useEffect(() => {
+    // 1. Update Speech Recognition Language
+    if (recognitionRef.current) {
+        recognitionRef.current.lang = language === 'es' ? 'es-MX' : 'en-US';
+    }
+
+    // 2. Auto-switch voice if current voice doesn't match language
+    if (availableVoices.length > 0) {
+        const currentVoice = availableVoices.find(v => v.name === selectedVoiceName);
+        const isMatch = currentVoice?.lang.toLowerCase().includes(language === 'es' ? 'es' : 'en');
+        
+        if (!isMatch) {
+            // Find best match for new language
+            const newVoice = availableVoices.find(v => v.lang.toLowerCase().includes(language === 'es' ? 'es' : 'en'));
+            if (newVoice) {
+                setSelectedVoiceName(newVoice.name);
+                // Announce language change
+                synthRef.current.cancel();
+                const utterance = new SpeechSynthesisUtterance(language === 'es' ? "Idioma cambiado a Español" : "Language switched to English");
+                utterance.voice = newVoice;
+                synthRef.current.speak(utterance);
+            }
+        }
+    }
+  }, [language, availableVoices]);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, showDashboard, showAnalytics]);
@@ -284,7 +325,7 @@ const TillmanKnowledgeAssistant = () => {
     
     // Test the voice
     synthRef.current.cancel();
-    const utterance = new SpeechSynthesisUtterance("Voice updated. I am Nexus.");
+    const utterance = new SpeechSynthesisUtterance(language === 'es' ? "Voz actualizada. Soy Nexus." : "Voice updated. I am Nexus.");
     const voiceObj = availableVoices.find(v => v.name === newVoice);
     if (voiceObj) utterance.voice = voiceObj;
     synthRef.current.speak(utterance);
@@ -406,7 +447,7 @@ const TillmanKnowledgeAssistant = () => {
                             // Helper to determine if a key is potentially a ticket number column
                             const isTicketKey = (k: string) => {
                                 if (forbiddenTerms.some(term => k.includes(term))) return false;
-                                return k.includes('ticket') || k.includes('locate');
+                                return k.includes('ticket') || k.includes('locate') || k.includes('tic');
                             };
 
                             // Find all potential ticket columns
@@ -419,6 +460,9 @@ const TillmanKnowledgeAssistant = () => {
                                 k === 'ticket' || 
                                 k === 'ticket #' || 
                                 k === 'ticket number' || 
+                                k === 'ticket no' || 
+                                k === 'ticket id' || 
+                                k === 'tic' || 
                                 k.includes('1st') || 
                                 k.includes('ticket 1')
                             );
@@ -460,7 +504,7 @@ const TillmanKnowledgeAssistant = () => {
                                 escalated: normalizedRow['date escalated'] || '',
                                 status: normalizedRow['ticket status'] || normalizedRow['status'] || '',
                                 completed: normalizedRow['date ticket completed'] || normalizedRow['date completed'] || '',
-                                footage: normalizedRow['footage'] || '',
+                                // NOTE: We explicitly DO NOT include footage from locate sheet to avoid calculations errors.
                                 notes: normalizedRow['notes'] || normalizedRow['comments'] || '',
                             };
                             locateMap[key].push(ticketData);
@@ -514,6 +558,10 @@ const TillmanKnowledgeAssistant = () => {
             const validRows = sheetData.map(row => {
                 const ntpKey = Object.keys(row).find(key => key.includes("NTP Number")) || 'NTP Number';
                 const ntpValue = row[ntpKey];
+
+                // Find Footage Remaining specifically (Case insensitive search)
+                const footageRemKey = Object.keys(row).find(key => key.toLowerCase().includes("footage remaining")) || 'Footage Remaining';
+                const footageRemValue = row[footageRemKey];
                 
                 let market = ntpKey.replace("NTP Number", "").trim();
                 if (!market) market = "General";
@@ -525,7 +573,8 @@ const TillmanKnowledgeAssistant = () => {
                 ...row,
                 'NTP Number': ntpValue,
                 'Market': market,
-                'LocateTickets': locateInfo
+                'LocateTickets': locateInfo,
+                'Footage Remaining': footageRemValue // Store explicit Footage Remaining column
                 };
             }).filter(row => {
                 const ntpNumber = row['NTP Number'];
@@ -756,8 +805,13 @@ const TillmanKnowledgeAssistant = () => {
 
         Object.keys(supervisorGroups).sort().forEach(supervisor => {
           const projects = supervisorGroups[supervisor];
+          // Calculate Total Footage using 'Footage Remaining' preferred
           const totalFootage = projects.reduce((sum: number, p: any) => {
-            const footage = parseFloat(String(p['Footage UG'] || '0').replace(/,/g, '')) || 0;
+            let val = p['Footage Remaining'];
+            if (val === undefined || val === null || String(val).trim() === '') {
+                val = p['Footage UG'];
+            }
+            const footage = parseFootage(val);
             return sum + footage;
           }, 0);
           
@@ -776,6 +830,9 @@ const TillmanKnowledgeAssistant = () => {
           const hhp = project['HHP'] || project['hhp'] || 'N/A';
           const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
           const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
+          
+          // Footage Logic for specific project details
+          const footageRemaining = project['Footage Remaining'] !== undefined ? project['Footage Remaining'] : project['Footage UG'];
 
           let locateDetailsStr = "No locate data found.";
           if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
@@ -785,7 +842,8 @@ const TillmanKnowledgeAssistant = () => {
                     .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
                     .join(', ');
                  const fields = [];
-                 if (ticketNums) fields.push(`Tickets: [${ticketNums}]`);
+                 // Removed brackets [] from ticket numbers display
+                 if (ticketNums) fields.push(`Tickets: ${ticketNums}`);
                  if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
                  if (l.status && String(l.status).trim() !== '') fields.push(`Status: ${l.status}`);
                  if (l.dueDate && String(l.dueDate).trim() !== '') fields.push(`Due: ${l.dueDate}`);
@@ -797,7 +855,7 @@ const TillmanKnowledgeAssistant = () => {
              }).join('\n');
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage: ${project['Footage UG']} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage Remaining: ${footageRemaining} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
@@ -1011,14 +1069,14 @@ ${projectDataContext}
     *   TCMB27 Place Buried - power meter base: $124.00/EA
     *   TCMB28 Place Buried - alpha power cabinet: $324.00/EA
     *   TCMB29 Place Buried – OLT cabinet: $400.00/EA
-    *   TCMB30 Place Buried - equipment and pad up to 10 sq. ft.: $1,500.00/EA
-    *   TCMB31 Place Buried - equipment and pad over 10 to 30 sq. ft.: $1,800.00/EA
-    *   TCMB32 Place Buried - equipment and pad over 30 to 50 sq. ft.: $2,800.00/EA
-    *   TCMB33 Place Buried - equipment and pad over 50 to 100 sq. ft.: $3,500.00/EA
-    *   TCMB34 Place Buried - concrete pad up to 10 sq. ft.: $400.00/EA
-    *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft.: $850.00/EA
-    *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft.: $1,500.00/EA
-    *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft.: $2,000.00/EA
+    *   TCMB30 Place Buried - equipment and pad up to 10 sq. ft. (Per EA): $1,500.00/EA
+    *   TCMB31 Place Buried - equipment and pad over 10 to 30 sq. ft. (Per EA): $1,800.00/EA
+    *   TCMB32 Place Buried - equipment and pad over 30 to 50 sq. ft. (Per EA): $2,800.00/EA
+    *   TCMB33 Place Buried - equipment and pad over 50 to 100 sq. ft. (Per EA): $3,500.00/EA
+    *   TCMB34 Place Buried - concrete pad up to 10 sq. ft. (Per EA): $400.00/EA
+    *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft. (Per EA): $850.00
+    *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft. (Per EA): $1,500.00/EA
+    *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft. (Per EA): $2,000.00/EA
     *   TCMB3A Place Buried - handhole 13x24x18: $122.00/EA
     *   TCMB3B Place Buried - handhole 17x30x24: $243.00/EA
     *   TCMB3C Place Buried - handhole 24x36x24: $265.00/EA
@@ -1123,32 +1181,120 @@ ${projectDataContext}
     *   TCHR53 Supervisor - Over Time Rate: $120.00/HR
     *   TCHR54 Supervisor - Natural Disaster Rate Outside Market Radius: $145.00/HR
     *   TCHR55 Supervisor - Natural Disaster Rate Within Market Radius: $125.00/HR
-    *   TCHR61 Per Diem Rate - Natural Disaster Outside Market Radius: $172.00/Day
-    *   TCHR62 Hourly Equipment Rate - traffic barrel - Normal Rate: $6.00/HR
-    *   TCHR63 Daily Equipment Rate - traffic barrel - Normal Rate: $20.00/DAY
-    *   TCHR64 Weekly Equipment Rate - traffic barrel - Normal Rate: $95.00/WK
-    *   TCHR65 Hourly Equipment Rate - work zone sign - Normal Rate: $6.00/HR
-    *   TCHR66 Daily Equipment Rate – work zone sign - Normal Rate: $28.00/DAY
-    *   TCHR67 Weekly Equipment Rate – work zone sign - Normal Rate: $95.00/WK
-    *   TCHR68 Hourly Equipment Rate - traffic cones - Normal Rate: $3.00/HR
-    *   TCHR69 Hourly Equipment Rate - traffic cones - Over time Rate: $5.00/HR
-    *   TCHR70 Daily Equipment Rate – traffic cones - Normal Rate: $20.00/DAY
-    *   TCHR71 Daily Equipment Rate – traffic cones - Over time Rate: $20.00/DAY
-    *   TCHR72 Weekly Equipment Rate – traffic cones - Normal Rate: $100.00/WK
-    *   TCHR73 Daily Equipment Rate - steel plate - Normal Rate: $125.00/DY
-    *   TCHR74 Weekly Equipment Rate - steel plate - Normal Rate: $120.00/WK
-    *   TCHR75 Monthly Equipment Rate - steel plate - Normal Rate: $250.00/MO
-    *   TCHR76 Hourly Vehicle rate - large vehicle - Normal Rate: $100.00/HR
-    *   TCHR77 Hourly Vehicle Rate - medium vehicle - Normal Rate: $75.00/HR
-    *   TCHR78 Hourly Vehicle Rate - small vehicle - Normal Rate: $40.00/HR
-    *   TCHR79 Hourly Equipment Rate - large equipment - Normal Rate: $125.00/HR
-    *   TCHR80 Hourly Equipment Rate - medium equipment - Normal Rate: $100.00/HR
-    *   TCHR81 Hourly Equipment Rate - Small Equipment (Other) - Normal Rate: $95.00/HR
-    *   TCHR82 Hourly Equipment Rate - small mechanical equipment (hand-held) - Normal Rate: $35.00/HR
-    *   TCHR83 Daily Equipment Rate - concrete barriers - Normal Rate: $75.00/DY
-    *   TCHR84 Weekly Equipment Rate - concrete barrier - Normal Rate: $65.00/WK
-    *   TCHR85 Monthly Equipment Rate - concrete barrier - Normal Rate: $270.00/MO
-    *   TCMU Material Mark-up: 5%
+    *   TCHR61 Per Diem Rate - Natural Disaster Outside Market Radius (Per DAY): $103.00
+    *   TCHR62 Hourly Equipment Rate - traffic barrel - Normal Rate (Per HR): $3.50
+    *   TCHR63 Daily Equipment Rate - traffic barrel - Normal Rate (Per DAY): $12.00
+    *   TCHR64 Weekly Equipment Rate - traffic barrel - Normal Rate (Per WK): $57.00
+    *   TCHR65 Hourly Equipment Rate - work zone sign - Normal Rate (Per HR): $3.50
+    *   TCHR66 Daily Equipment Rate - work zone sign - Normal Rate (Per DAY): $16.50
+    *   TCHR67 Weekly Equipment Rate - work zone sign - Normal Rate (Per WK): $57.00
+    *   TCHR68 Hourly Equipment Rate - traffic cones - Normal Rate (Per HR): $1.80
+    *   TCHR69 Hourly Equipment Rate - traffic cones - Over time Rate (Per HR): $3.00
+    *   TCHR70 Daily Equipment Rate - traffic cones - Normal Rate (Per DAY): $12.00
+    *   TCHR71 Daily Equipment Rate - traffic cones - Over time Rate (Per DAY): $12.00
+    *   TCHR72 Weekly Equipment Rate - traffic cones - Normal Rate (Per WK): $60.00
+    *   TCHR73 Daily Equipment Rate - steel plate - Normal Rate (Per DAY): $75.00
+    *   TCHR74 Weekly Equipment Rate - steel plate - Normal Rate (Per WK): $72.00
+    *   TCHR75 Monthly Equipment Rate - steel plate - Normal Rate (Per MO): $150.00
+    *   TCHR76 Hourly Vehicle rate - large vehicle - Normal Rate (Per HR): $60.00
+    *   TCHR77 Hourly Vehicle Rate - medium vehicle - Normal Rate (Per HR): $45.00
+    *   TCHR78 Hourly Vehicle Rate - small vehicle - Normal Rate (Per HR): $24.00
+    *   TCHR79 Hourly Equipment Rate - large equipment - Normal Rate (Per HR): $75.00
+    *   TCHR80 Hourly Equipment Rate - medium equipment - Normal Rate (Per HR): $60.00
+    *   TCHR81 Hourly Equipment Rate - Small Equipment (Other) - Normal Rate (Per HR): $57.00
+    *   TCHR82 Hourly Equipment Rate - small mechanical equipment (hand-held) - Normal Rate (Per HR): $21.00
+    *   TCHR83 Daily Equipment Rate - concrete barriers - Normal Rate (Per DAY): $45.00
+    *   TCHR84 Weekly Equipment Rate - concrete barrier - Normal Rate (Per WK): $39.00
+    *   TCHR85 Monthly Equipment Rate - concrete barrier - Normal Rate (Per MO): $162.00
+
+*   **MDU / Specialized**:
+    *   TEMDU-011 MDU MEETINGS (Per HR): $50.00
+    *   TMBT PLACE HEXATRONIC YARD CHAMBER/TOBY2 BOX (Per EA): $24.00
+    *   TMDU092-A FUSION SPLICE FIBER CABLE 1 to 15 Splices (Per EA): $24.00
+    *   TMDU092-B FUSION SPLICE FIBER CABLE 16 to 30 Splices (Per EA): $23.00
+    *   TMDU092-C FUSION SPLICE FIBER CABLE 31 to 50 Splices (Per EA): $20.00
+    *   TMDU092-D FUSION SPLICE FIBER CABLE 51 to 99 Splices (Per EA): $19.00
+    *   TMDU092-E FUSION SPLICE FIBER CABLE 100 & Above Splices (Per EA): $18.00
+    *   TMDU094-A REMOVE MOLDING, 1 to 15 Units (Per LU): $15.50
+    *   TMDU094-B REMOVE MOLDING, 16 to 30 Units (Per LU): $13.00
+    *   TMDU094-C REMOVE MOLDING, 31 to 50 Units (Per LU): $11.50
+    *   TMDU094-D REMOVE MOLDING, 51 to 99 Units (Per LU): $9.50
+    *   TMDU094-E REMOVE MOLDING, 100 & Above Units (Per LU): $8.00
+    *   TMDU096-A DRYWALL REPAIR 8"x8" to 12"x12" - 1 to 9 cut outs (Per EA): $43.00
+    *   TMDU096-B DRYWALL REPAIR 8"x8" to 12"x12" - 10 or more cut outs (Per EA): $36.00
+    *   TMDU096-C DRYWALL REPAIR 13"x13" to 18"x18" - 1 to 9 cut outs (Per EA): $47.00
+    *   TMDU096-D DRYWALL REPAIR 13"x13" to 18"x18" 10 or more cut outs (Per EA): $39.00
+    *   TMDU-013 CORE BORE -Greater than 2.5 to 4.0 Inch Diameter Hole up through 24 inches of material. 1 to 9 Hole(s). (Per EA): $90.00
+    *   TMDU-013-A CORE BORE - below 2.5 Inch Diameter Hole through greater than 12 inches of material. 1 to 9Hole(s). (Per EA): $80.00
+    *   TMDU-014 CORE BORE - Greater than 2.5 to 4.0 Inch Diameter Hole up through 24 inches of material. 10 or More Holes. (Per EA): $75.00
+    *   TMDU-014-A CORE BORE - below 2.5 Inch Diameter Hole through greater than 12 inches of material. 10 orMore Hole(s). (Per EA): $65.00
+    *   TMDU-015 CORE BORE - 4.1 to 5.0 Inch Diameter Hole up through 24 inches of material. 1 to 9 Hole(s). (Per EA): $99.00
+    *   TMDU-016 CORE BORE - 4.1 to 5.0 Inch Diameter Hole up through 24 inches of material. 10 or More Holes. (Per EA): $89.00
+    *   TMDU-021 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 1 to 9 Hole(s). (Per EA): $100.00
+    *   TMDU-022 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 10 or MoreHoles. (Per EA): $90.00
+    *   TMDU-023 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 1 to 9 Hole(s). (Per EA): $129.00
+    *   TMDU-024 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 10 or MoreHoles. (Per EA): $119.00
+    *   TMDU-029 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 36.1 inches and above of material. 1 to 9Hole(s). (Per EA): $134.00
+    *   TMDU-030 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 36.1 inches and above of material. 10 or More Holes. (Per EA): $124.00
+    *   TMDU-031 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 36.1 inches and above of material. 1 to 9Hole(s). (Per EA): $149.00
+    *   TMDU-032 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 36.1 inches and above of material. 10 or More Holes. (Per EA): $139.00
+    *   TMDU-047 PLACE TERMINAL BOX/EQUIPMENT/STORAGE BOX (Per EA): $20.00
+    *   TMDU-050A PLACE ELECTRICAL CONDUIT EMT IN CONJUNCTION WITH TURNKEY CONSTRUCTION UNITS (Per FT): $4.00
+    *   TMDU-050B PLACE ELECTRICAL CONDUIT EMT - NOT IN CONJUNCTION WITH TURNKEY CONSTRUCTIONUNITS (Per FT): $7.00
+    *   TMDU-054 HAND RODDING / BLOWN IN OCCUPIED DUCT (Per FT): $0.30
+    *   TMDU-055 HAND RODDING / BLOWN IN UN-OCCUPIED DUCT (Per FT): $0.00
+    *   TMDU-066 PLACE ADDITIONAL WIRE/CABLE/FIBER/INNERDUCT (Per FT): $0.30
+    *   TMDU-069 PLACE BACKBOARD & PROVIDE ENTRANCE HOLE (Per EA): $80.00
+    *   TMDU-075 TRIP CHARGE CREW RATE - 2 MEN (Per EA): $90.00
+    *   TMDU-076 INSTALL SMOOTH WALL INNERDUCT (Per FT): $2.00
+    *   TMDU-091 GROUND PENATRATING RADAR SURVEY, 1 to 9 Scan(s) (Per SCAN): $190.00
+    *   TMDU-092 GROUND PENATRATING RADAR SURVEY, 10 or more Scan(s) (Per SCAN): $160.00
+    *   TMDU-095-A PLACE NEW MOLDING (Per FT): $2.00
+    *   TMDU-095-B PLACE NEW MOLDING (Per FT): $1.00
+
+*   **Turnkey Construction (Per Living Unit)**:
+    *   TMDULU-001-A TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 1-15 UNITS (Per LU): $190.00
+    *   TMDULU-001-B TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 16-30 UNITS (Per LU): $185.00
+    *   TMDULU-001-C TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 31-50 UNITS (Per LU): $150.00
+    *   TMDULU-001-D TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 51-99 UNITS (Per LU): $145.00
+    *   TMDULU-001-E TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 100 AND GREATER UNITS (Per LU): $135.00
+    *   TMDULU-002-A TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 1-15 UNITS (Per LU): $180.00
+    *   TMDULU-002-B TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 16-30 UNITS (Per LU): $175.00
+    *   TMDULU-002-C TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 31-50 UNITS (Per LU): $140.00
+    *   TMDULU-002-D TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 51-99 UNITS (Per LU): $135.00
+    *   TMDULU-002-E TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP (Entry to LU) MDU 100 AND GREATERUNITS (Per LU): $130.00
+    *   TMDULU-003 MDU PREPARATION PER FLOOR (Per FL): $500.00
+    *   TMDULU-004-A TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 1-15 UNITS (Per LU): $145.00
+    *   TMDULU-004-B TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 16-30 UNITS (Per LU): $145.00
+    *   TMDULU-004-C TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 31-50 UNITS (Per LU): $125.00
+    *   TMDULU-004-D TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 51-99 UNITS (Per LU): $125.00
+    *   TMDULU-004-E TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 100 AND GREATER UNITS (Per LU): $120.00
+    *   TMDULU-005-A TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 1-15 UNITS (Per LU): $135.00
+    *   TMDULU-005-B TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 16-30 UNITS (Per LU): $135.00
+    *   TMDULU-005-C TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 31-50 UNITS (Per LU): $120.00
+    *   TMDULU-005-D TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 51-99 UNITS (Per LU): $120.00
+    *   TMDULU-005-E TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 100 AND GREATER UNITS (Per LU): $115.00
+    *   TMDULU-006-A TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 1-15UNITS (Per LU): $95.00
+    *   TMDULU-006-B TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 16-30 UNITS (Per LU): $90.00
+    *   TMDULU-006-C TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 31-50UNITS (Per LU): $75.00
+    *   TMDULU-006-D TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 51-99 UNITS (Per LU): $70.00
+    *   TMDULU-006-E TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 100 AND GREATER UNITS (Per LU): $65.00
+    *   TMDULU-007-A TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 1-15 UNITS (Per LU): $90.00
+    *   TMDULU-007-B TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 16-30 UNITS (Per LU): $85.00
+    *   TMDULU-007-C TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 31-50UNITS (Per LU): $70.00
+    *   TMDULU-007-D TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 51-99 UNITS (Per LU): $65.00
+    *   TMDULU-007-E TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 100 ANDGREATER UNITS (Per LU): $60.00
+    *   TMDULU-008-A TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 1-15 UNITS (Per LU): $165.00
+    *   TMDULU-008-B TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 16-30 UNITS (Per LU): $160.00
+    *   TMDULU-008-C TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 31-50 UNITS (Per LU): $145.00
+    *   TMDULU-008-D TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 51-99 UNITS (Per LU): $140.00
+    *   TMDULU-008-E TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 100 AND GREATERUNITS (Per LU): $125.00
+    *   TMDULU-009-A TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 1-15 UNITS (Per LU): $155.00
+    *   TMDULU-009-B TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 16-30 UNITS (Per LU): $150.00
+    *   TMDULU-009-C TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 31-50 UNITS (Per LU): $135.00
+    *   TMDULU-009-D TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 51-99 UNITS (Per LU): $130.00
+    *   TMDULU-009-E TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 100 AND GREATERUNITS (Per LU): $120.00
+    *   TMDULU-022 SECURITY ADDER (Per LU): $90.00
 
 ## SECTION 6B: LIGHTSPEED SUBCONTRACTOR RATE CARD (Tillman Fiber 2024 - Revised 1/31/2025)
 *   **Aerial**:
@@ -1519,7 +1665,7 @@ ${projectDataContext}
         5. Click on the created work shift form to enter all remaining information.
 *   **Submission**: Your redlines and all other information combined in one zip file should be sent to **Tillman Production**.
 
-## SECTION 11: SUB CONTRACTOR INVOICING & PRODUCTION SUBMISSION & APPROVAL
+## SECTION 11: PRODUCTION SUBMISSION & APPROVAL FOR INTERNAL INVOICING
 *   **Daily Submission**: Production should be submitted daily so it can be Level 1 and 2 approved daily. If it is not, we cannot guarantee that all production will be Level 2 approved by the pay close cut off.
 *   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, has been uploaded onto the task on the FORMS tab.
 *   **Task Assignment**:
@@ -1611,14 +1757,20 @@ ${projectDataContext}
 10. **OneStepGPS (Vehicle Tracking)**: [OneStepGPS](https://track.onestepgps.com/v3/auth/login?r=https://track.onestepgps.com/v3/ux/map)
 
 ## SECTION 16: MANDATORY LINKING RULES
-*   **Contractor Invoicing**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
+*   **Contractor Invoicing And Production**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
 *   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
 *   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
-*   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
+*   **Locates / Digging**: When answering about locates, ALWAYS include these links: [Sunshine 811](https://exactix.sunshine811.com/login), [Locate Tracker](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/EdvfutoSOu1GjODYhk1aFEkBbm3WQj1UA2VCNUdg71tj3Q?e=0eslHQ&web=1)
 `;
 
       
       const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+      // Add Language instruction modification here
+      let languageInstruction = '';
+      if (language === 'es') {
+          languageInstruction = `\n\nCRITICAL LANGUAGE INSTRUCTION: The user has selected SPANISH language. You MUST answer all questions in Spanish (Español). Translate your knowledge base information, procedures, and conversational responses into Spanish. HOWEVER, you must keep specific technical identifiers exactly as they appear in the source data (e.g. "NTP Number", "BOM", "SOW", Ticket Numbers like "324501377", Project IDs). Do not translate the technical acronyms themselves, but explain them in Spanish if needed.`;
+      }
 
       const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
 Current Date: ${currentDate}
@@ -1647,6 +1799,12 @@ CRITICAL INSTRUCTIONS:
     *   **On Track or In Jeopardy**: The health status of the project.
 15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
 16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
+17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
+18. **Data Sources**:
+    *   **Footage Data**: STRICTLY derived from the "Footage Remaining" column in the project file. If empty, fall back to "Footage UG". NEVER use footage data from locate tickets.
+    *   **Locate Tickets**: Sourced from the locate tickets file. You must output the Ticket Number provided in the data. If the data says "Tickets: 324501377", output that number.
+
+${languageInstruction}
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
@@ -1709,11 +1867,12 @@ ${knowledgeBase}`;
   };
 
   const quickQuestions = [
-    "What is the status of a specific project?",
+    "Where do I find the maps for our projects?",
     "What is the weather at the current location?",
-    "Show me project analytics",
-    "Compare the TCBDB2 rate on both rate cards",
-    "Find a map of project D-HDH60"
+    "How do I setup Timestamp Camera?",
+    "Compare the TCBDB2 rate on both rate cards?",
+    "How do I submit a Close Out Package?",
+    "What is the naming convention for the photos?"
   ];
 
   return (
@@ -1724,6 +1883,7 @@ ${knowledgeBase}`;
           <div className="flex items-center gap-3">
              <div className="h-10 w-auto flex items-center justify-center">
                 <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
+                <img src="./nexus-logo-master.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
              </div>
             <div>
               <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
@@ -1731,6 +1891,15 @@ ${knowledgeBase}`;
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <button 
+                onClick={() => {
+                   setLanguage(prev => prev === 'en' ? 'es' : 'en');
+                }}
+                className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all flex items-center gap-1"
+                title={language === 'en' ? "Switch to Spanish" : "Cambiar a Inglés"}
+            >
+                {language === 'en' ? '🇺🇸 EN' : '🇲🇽 ES'}
+            </button>
             <button 
                 onClick={() => { setShowAnalytics(!showAnalytics); setShowDashboard(false); }} 
                 className={`p-2 rounded-full transition-all ${showAnalytics ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
@@ -1892,7 +2061,7 @@ ${knowledgeBase}`;
                   <div className="mt-2 flex items-center gap-3 no-print">
                       <button onClick={() => speakText(message.content)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                        Read aloud
+                        {language === 'es' ? "Leer en voz alta" : "Read aloud"}
                       </button>
                   </div>
                 )}
@@ -1924,7 +2093,7 @@ ${knowledgeBase}`;
               )}
             </button>
             <div className="flex-1 relative">
-              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? "Listening..." : "Type your question or click the microphone to speak..."} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
+              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? (language === 'es' ? "Escuchando..." : "Listening...") : (language === 'es' ? "Escribe tu pregunta o habla..." : "Type your question or click the microphone to speak...")} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
             </div>
             <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none" title="Send message">
               <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
@@ -1933,14 +2102,14 @@ ${knowledgeBase}`;
           {isListening && (
             <p className="text-sm text-red-600 mt-2 flex items-center gap-2 animate-pulse justify-center sm:justify-start">
               <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-              Listening... Speak your question now
+              {language === 'es' ? "Escuchando... Di tu pregunta ahora" : "Listening... Speak your question now"}
             </p>
           )}
           {isSpeaking && (
             <div className="mt-2 flex items-center justify-between">
               <p className="text-sm text-blue-600 flex items-center gap-2">
                 <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                Speaking response...
+                {language === 'es' ? "Hablando..." : "Speaking response..."}
               </p>
               <button onClick={stopSpeaking} className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1">
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
@@ -1954,7 +2123,7 @@ ${knowledgeBase}`;
       {/* Footer */}
       <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
         <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap text-center">
-          <span>💡 Ask about procedures, weather, rates, or live project data</span>
+          <span>{language === 'es' ? "💡 Pregunta sobre procedimientos, clima, tarifas o datos del proyecto" : "💡 Ask about procedures, weather, rates, or live project data"}</span>
           <span className="hidden sm:inline">•</span>
           <span>🎤 Voice works in Chrome & Edge</span>
         </div>

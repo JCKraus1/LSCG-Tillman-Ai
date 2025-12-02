@@ -1665,7 +1665,7 @@ ${projectDataContext}
         5. Click on the created work shift form to enter all remaining information.
 *   **Submission**: Your redlines and all other information combined in one zip file should be sent to **Tillman Production**.
 
-## SECTION 11: PRODUCTION SUBMISSION & APPROVAL
+## SECTION 11: PRODUCTION SUBMISSION & APPROVAL FOR INTERNAL INVOICING
 *   **Daily Submission**: Production should be submitted daily so it can be Level 1 and 2 approved daily. If it is not, we cannot guarantee that all production will be Level 2 approved by the pay close cut off.
 *   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, has been uploaded onto the task on the FORMS tab.
 *   **Task Assignment**:
@@ -1757,10 +1757,10 @@ ${projectDataContext}
 10. **OneStepGPS (Vehicle Tracking)**: [OneStepGPS](https://track.onestepgps.com/v3/auth/login?r=https://track.onestepgps.com/v3/ux/map)
 
 ## SECTION 16: MANDATORY LINKING RULES
-*   **Contractor Invoicing**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
+*   **Contractor Invoicing And Production**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
 *   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
 *   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
-*   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
+*   **Locates / Digging**: When answering about locates, ALWAYS include these links: [Sunshine 811](https://exactix.sunshine811.com/login), [Locate Tracker](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/EdvfutoSOu1GjODYhk1aFEkBbm3WQj1UA2VCNUdg71tj3Q?e=0eslHQ&web=1)
 `;
 
       
@@ -1867,11 +1867,12 @@ ${knowledgeBase}`;
   };
 
   const quickQuestions = [
-    "What is the status of a specific project?",
+    "Where do I find the maps for our projects?",
     "What is the weather at the current location?",
-    "Show me project analytics",
-    "Compare the TCBDB2 rate on both rate cards",
-    "Find a map of project D-HDH60"
+    "How do I setup Timestamp Camera?",
+    "Compare the TCBDB2 rate on both rate cards?",
+    "How do I submit a Close Out Package?",
+    "What is the naming convention for the photos?"
   ];
 
   return (
