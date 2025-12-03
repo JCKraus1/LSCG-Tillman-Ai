@@ -1639,12 +1639,12 @@ ${projectDataContext}
 *   **Ticket Life**: Generally 30 days (state dependent). Renewal required if expired.
 *   **Tolerance Zone**: 24 inches (approx) from outer edge of utility markings. Hand dig only in this zone.
 *   **Positive Response**: Check 811 system for utility responses (Clear/Marked/Conflict) before digging.
-*   **Damages**: Stop work immediately. Secure the area. Notify Supervisor and Utility Owner. Take photos.
+*   **Damages**: Stop work immediately. Secure the area. Notify Supervisor and Utility Owner. Take photos with provided damage hit kit.
 
 ## SECTION 9: SAFETY & COMPLIANCE
 *   **PPE**: Hard hat, safety vest (Class 2/3), steel-toe boots, safety glasses required at all times.
 *   **Traffic Control**: MUTCD standards must be followed for lane closures/shoulder work.
-*   **Tailgate Meetings**: Daily safety briefing required before work starts. Signed log needed.
+*   **Tailgate Meetings**: Daily safety briefing required before work starts.
 
 ## SECTION 10: FILE NAMING & REPORTING PROCEDURES
 *   **Project Naming Convention**: All files should generally follow: \`Date, Document Type, Project Name\`.
@@ -1665,9 +1665,24 @@ ${projectDataContext}
         5. Click on the created work shift form to enter all remaining information.
 *   **Submission**: Your redlines and all other information combined in one zip file should be sent to **Tillman Production**.
 
-## SECTION 11: PRODUCTION SUBMISSION & APPROVAL FOR INTERNAL INVOICING
+## SECTION 11: PRODUCTION SUBMISSION & APPROVAL FOR SUBCONTRACTOR INVOICING
 *   **Daily Submission**: Production should be submitted daily so it can be Level 1 and 2 approved daily. If it is not, we cannot guarantee that all production will be Level 2 approved by the pay close cut off.
-*   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, has been uploaded onto the task on the FORMS tab.
+    *   Steps:
+        1. Goto [Penguin Data](https://fullcircle.penguindata.com/login).
+        2. Enter your username and password.
+        3. Choose Standard and click Sign in.
+        4. Make sure you are in the correct office enviroment in the top left of the screen. (e.g. Clearwater, Polk, Manatee, Citruss, Miami)
+        5. Click on the Projects link on the top of the screen.
+        6. Click on Project Data and choose Manage Project.
+        7. Look for the Functions button on the top right of the screen and click it.
+        8. In the search drop down type the name of your project and click search. (e.g. BHT-FOE-03)
+        9. A popup will appear with the project and its associated tasks.
+        10. Click on the task name you would like to submit or approve production for. Phase 1 is for Construction Production and Phase 2 is for Fiber Production.
+        11. Verify the subcontractor's backup on the Forms tab.
+        12. Click the Billing Tab and verify Pending Mobile Entered Codes. If there are any codes listed here for approval you must select the Save checkbox.
+        13. Once you have selected all the billing codes you will be approving, scroll to the bottom of the screen and click the Submit Button.
+
+*   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, have been uploaded onto the task on the FORMS tab.
 *   **Task Assignment**:
     *   All **construction** work falls on the **Phase 1** task.
     *   All **fiber** work falls on the **Phase 2** task.
@@ -1741,8 +1756,8 @@ ${projectDataContext}
     4.  Choose option starting with \`custom-input-text_\`.
     5.  Return to main screen, click clock icon again.
     6.  Click "Display custom text on camera".
-    7.  Input format: \`ProjectName-Sheet#\` (e.g., \`D-HDH60-Sheet5\`).
-*   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#_DateTime.jpg\`.
+    7.  Input format: \`ProjectName-Sheet#-Type of Picture(Toby, Dap, Hand Hole Etc)\` (e.g., \`D-HDH60-Sheet5-Toby\`).
+*   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#-Type of Picture(Toby, Dap, Hand Hole Etc)_DateTime.jpg\`.
 
 ## SECTION 15: IMPORTANT LINKS
 1.  **Tillman Project SharePoint**: [SharePoint](https://lightspeedconstructiongroup.sharepoint.com/sites/ClearwaterSupervisors/SitePages/ProjectHome.aspx)
@@ -1757,7 +1772,7 @@ ${projectDataContext}
 10. **OneStepGPS (Vehicle Tracking)**: [OneStepGPS](https://track.onestepgps.com/v3/auth/login?r=https://track.onestepgps.com/v3/ux/map)
 
 ## SECTION 16: MANDATORY LINKING RULES
-*   **Contractor Invoicing And Production**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
+*   **Contractor and Subcontractor Invoicing And Production**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
 *   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
 *   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
 *   **Locates / Digging**: When answering about locates, ALWAYS include these links: [Sunshine 811](https://exactix.sunshine811.com/login), [Locate Tracker](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/EdvfutoSOu1GjODYhk1aFEkBbm3WQj1UA2VCNUdg71tj3Q?e=0eslHQ&web=1)
