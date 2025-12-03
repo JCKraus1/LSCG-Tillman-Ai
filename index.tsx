@@ -788,78 +788,78 @@ const TillmanKnowledgeAssistant = () => {
     setIsLoading(true);
 
     try {
-let projectDataContext = '';
+      let projectDataContext = '';
+      
+      // ... Existing project data formatting logic ...
+      if (projectData && projectData.length > 0) {
+        projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
+        
+        const supervisorGroups: any = {};
+        projectData.forEach(project => {
+          const supervisor = project['Assigned Supervisor'] || 'Unassigned';
+          if (!supervisorGroups[supervisor]) {
+            supervisorGroups[supervisor] = [];
+          }
+          supervisorGroups[supervisor].push(project);
+        });
 
-if (projectData && projectData.length > 0) {
-  projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
-  
-  // Pre-calculate ALL totals BEFORE sending to Claude
-  const supervisorTotals: Record<string, {count: number, footage: number, projects: string[]}> = {};
+        Object.keys(supervisorGroups).sort().forEach(supervisor => {
+          const projects = supervisorGroups[supervisor];
+          // Calculate Total Footage using 'Footage Remaining' preferred
+          const totalFootage = projects.reduce((sum: number, p: any) => {
+            let val = p['Footage Remaining'];
+            if (val === undefined || val === null || String(val).trim() === '') {
+                val = p['Footage UG'];
+            }
+            const footage = parseFootage(val);
+            return sum + footage;
+          }, 0);
+          
+          projectDataContext += `\n**${supervisor}**: ${projects.length} projects, ${totalFootage.toLocaleString()} ft remaining\nProjects: ${projects.map((p: any) => p['NTP Number']).join(', ')}\n`;
+        });
 
-  projectData.forEach(project => {
-    const supervisor = project['Assigned Supervisor'] || 'Unassigned';
-    if (!supervisorTotals[supervisor]) {
-      supervisorTotals[supervisor] = { count: 0, footage: 0, projects: [] };
-    }
-    supervisorTotals[supervisor].count += 1;
-    supervisorTotals[supervisor].projects.push(project['NTP Number']);
-    
-    let val = project['Footage Remaining'];
-    if (val === undefined || val === null || String(val).trim() === '') {
-      val = project['Footage UG'];
-    }
-    supervisorTotals[supervisor].footage += parseFootage(val);
-  });
+        projectDataContext += `\n\n**DETAILED PROJECT DATA:**\n`;
+        
+        projectData.forEach(project => {
+          const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
+          const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
+          const doorTagDate = project['Door Tag Date'] || 'N/A';
+          const locateDate = project['Locate Date'] || project['locate date'] || 'N/A';
+          const sowTsdDate = project['SOW TSD Date'] || project['sow tsd date'] || 'N/A';
+          const vendorAssignment = project['Vendor Assignment'] || project['vendor assignment'] || 'N/A';
+          const hhp = project['HHP'] || project['hhp'] || 'N/A';
+          const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
+          const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
+          
+          // Footage Logic for specific project details
+          const footageRemaining = project['Footage Remaining'] !== undefined ? project['Footage Remaining'] : project['Footage UG'];
 
-  // Build summary with PRE-CALCULATED numbers only
-  Object.keys(supervisorTotals).sort().forEach(supervisor => {
-    const total = supervisorTotals[supervisor];
-    projectDataContext += `\n**${supervisor}**: ${total.count} projects, ${total.footage.toLocaleString()} ft remaining\nProjects: ${total.projects.join(', ')}\n`;
-  });
+          let locateDetailsStr = "No locate data found.";
+          if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
+             const tickets = project['LocateTickets'];
+             locateDetailsStr = tickets.map((l: any, idx: number) => {
+                 const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4]
+                    .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
+                    .join(', ');
+                 const fields = [];
+                 // Removed brackets [] from ticket numbers display
+                 if (ticketNums) fields.push(`Tickets: ${ticketNums}`);
+                 if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
+                 if (l.status && String(l.status).trim() !== '') fields.push(`Status: ${l.status}`);
+                 if (l.dueDate && String(l.dueDate).trim() !== '') fields.push(`Due: ${l.dueDate}`);
+                 if (l.expireDate && String(l.expireDate).trim() !== '') fields.push(`Expires: ${l.expireDate}`);
+                 if (l.area && String(l.area).trim() !== '') fields.push(`Area: ${l.area}`);
+                 if (l.company && String(l.company).trim() !== '') fields.push(`Company: ${l.company}`);
+                 if (l.notes && String(l.notes).trim() !== '') fields.push(`Notes: ${l.notes}`);
+                 return `Entry ${idx + 1}: ${fields.join(', ')}`;
+             }).join('\n');
+          }
 
-  projectDataContext += `\n\n⚠️ CRITICAL SYSTEM NOTE: All totals above are PRE-CALCULATED by the system. Do NOT attempt to verify by adding numbers yourself.`;
-
-  // Add detailed project information
-  projectDataContext += `\n\n**DETAILED PROJECT DATA:**\n`;
-
-  projectData.forEach(project => {
-    const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
-    const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
-    const doorTagDate = project['Door Tag Date'] || 'N/A';
-    const locateDate = project['Locate Date'] || project['locate date'] || 'N/A';
-    const sowTsdDate = project['SOW TSD Date'] || project['sow tsd date'] || 'N/A';
-    const vendorAssignment = project['Vendor Assignment'] || project['vendor assignment'] || 'N/A';
-    const hhp = project['HHP'] || project['hhp'] || 'N/A';
-    const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
-    const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
-    
-    // Footage Logic for specific project details
-    const footageRemaining = project['Footage Remaining'] !== undefined ? project['Footage Remaining'] : project['Footage UG'];
-
-    let locateDetailsStr = "No locate data found.";
-    if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
-      const tickets = project['LocateTickets'];
-      locateDetailsStr = tickets.map((l: any, idx: number) => {
-        const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4]
-          .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
-          .join(', ');
-        const fields = [];
-        if (ticketNums) fields.push(`Tickets: ${ticketNums}`);
-        if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
-        if (l.status && String(l.status).trim() !== '') fields.push(`Status: ${l.status}`);
-        if (l.dueDate && String(l.dueDate).trim() !== '') fields.push(`Due: ${l.dueDate}`);
-        if (l.expireDate && String(l.expireDate).trim() !== '') fields.push(`Expires: ${l.expireDate}`);
-        if (l.area && String(l.area).trim() !== '') fields.push(`Area: ${l.area}`);
-        if (l.company && String(l.company).trim() !== '') fields.push(`Company: ${l.company}`);
-        if (l.notes && String(l.notes).trim() !== '') fields.push(`Notes: ${l.notes}`);
-        return `Entry ${idx + 1}: ${fields.join(', ')}`;
-      }).join('\n');
-    }
-
-    projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage Remaining: ${footageRemaining} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
-  });} else {
-  projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
-}
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage Remaining: ${footageRemaining} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
+        });
+      } else {
+        projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
+      }
 
       // Keep existing knowledge base content
       const knowledgeBase = `
@@ -1779,18 +1779,7 @@ ${projectDataContext}
 `;
 
       
-      const currentDate = new Date().toLocaleString('en-US', { 
-                          weekday: 'long', 
-                          year: 'numeric', 
-                          month: 'long', 
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          second: '2-digit',
-                          hour12: true,
-       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone
-      });
-
+      const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
 
       // Add Language instruction modification here
       let languageInstruction = '';
@@ -1825,14 +1814,11 @@ CRITICAL INSTRUCTIONS:
     *   **On Track or In Jeopardy**: The health status of the project.
 15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
 16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
-17. **MATH CRITICAL**: You are given pre-calculated totals per supervisor in the LIVE PROJECT DATA. 
-    * NEVER recalculate or add up project footage yourself
-    * ALWAYS use the provided supervisor totals
-    * If a user asks "how many feet total", respond with the supervisor summary totals ONLY
-    * Do NOT look at individual projects and add them - you WILL get it wrong
+17. **Math & Totals**: The "LIVE PROJECT DATA" contains footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
 18. **Data Sources**:
-    *   **Footage Data**: STRICTLY derived from the "Footage Remaining" column in the project file. If empty, fall back to "Footage UG". NEVER use footage data from locate tickets.
+    *   **Footage Remaining Data**: STRICTLY derived from the "Footage Remaining" column in the project file. If empty, fall back to "Footage UG". NEVER use footage data from locate tickets.
     *   **Locate Tickets**: Sourced from the locate tickets file. You must output the Ticket Number provided in the data. If the data says "Tickets: 324501377", output that number.
+    *   **Total Footage Data**: STRICTLY derived from the "Footage UG" column in the project file. NEVER use footage data from locate tickets.
 
 ${languageInstruction}
 
@@ -1879,9 +1865,22 @@ ${knowledgeBase}`;
       }
     } catch (error: any) {
       console.error('Error getting response:', error);
+      
+      let errorMsg = `I apologize, but I encountered an error: ${error.message || error}. Please check the console for details.`;
+      
+      // Enhanced Rate Limit Handling
+      if (error.message && (
+          error.message.includes('429') || 
+          error.message.includes('503') ||
+          error.message.toLowerCase().includes('quota') || 
+          error.message.toLowerCase().includes('resource exhausted')
+      )) {
+          errorMsg = "⏳ **System Cooling Down**\n\nI have reached the maximum number of requests allowed per minute. Please wait approximately **30 to 60 seconds** before asking your next question.\n\nThis ensures fair usage and reliable responses. Thank you for your patience!";
+      }
+
       const errorMessage = {
         role: 'assistant',
-        content: `I apologize, but I encountered an error: ${error.message || error}. Please check the console for details.`
+        content: errorMsg
       };
       setMessages([...updatedMessages, errorMessage]);
     } finally {
@@ -1914,7 +1913,7 @@ ${knowledgeBase}`;
              <div className="h-10 w-auto flex items-center justify-center">
                 <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
                 <img src="./nexus-logo-master.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
-              </div>
+             </div>
             <div>
               <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
               <p className="text-gray-300 text-xs hidden sm:block">AI-powered Construction & Project Intelligence</p>

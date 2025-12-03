@@ -1,3 +1,5 @@
+      // Keep existing knowledge base content
+      const knowledgeBase = `
 TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
 ${projectDataContext}
@@ -204,14 +206,14 @@ ${projectDataContext}
     *   TCMB27 Place Buried - power meter base: $124.00/EA
     *   TCMB28 Place Buried - alpha power cabinet: $324.00/EA
     *   TCMB29 Place Buried – OLT cabinet: $400.00/EA
-    *   TCMB30 Place Buried - equipment and pad up to 10 sq. ft.: $1,500.00/EA
-    *   TCMB31 Place Buried - equipment and pad over 10 to 30 sq. ft.: $1,800.00/EA
-    *   TCMB32 Place Buried - equipment and pad over 30 to 50 sq. ft.: $2,800.00/EA
-    *   TCMB33 Place Buried - equipment and pad over 50 to 100 sq. ft.: $3,500.00/EA
-    *   TCMB34 Place Buried - concrete pad up to 10 sq. ft.: $400.00/EA
-    *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft.: $850.00/EA
-    *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft.: $1,500.00/EA
-    *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft.: $2,000.00/EA
+    *   TCMB30 Place Buried - equipment and pad up to 10 sq. ft. (Per EA): $1,500.00/EA
+    *   TCMB31 Place Buried - equipment and pad over 10 to 30 sq. ft. (Per EA): $1,800.00/EA
+    *   TCMB32 Place Buried - equipment and pad over 30 to 50 sq. ft. (Per EA): $2,800.00/EA
+    *   TCMB33 Place Buried - equipment and pad over 50 to 100 sq. ft. (Per EA): $3,500.00/EA
+    *   TCMB34 Place Buried - concrete pad up to 10 sq. ft. (Per EA): $400.00/EA
+    *   TCMB35 Place Buried - concrete pad over 10 to 30 sq. ft. (Per EA): $850.00
+    *   TCMB36 Place Buried - concrete pad over 30 to 50 sq. ft. (Per EA): $1,500.00/EA
+    *   TCMB37 Place Buried - concrete pad over 50 to 100 sq. ft. (Per EA): $2,000.00/EA
     *   TCMB3A Place Buried - handhole 13x24x18: $122.00/EA
     *   TCMB3B Place Buried - handhole 17x30x24: $243.00/EA
     *   TCMB3C Place Buried - handhole 24x36x24: $265.00/EA
@@ -316,32 +318,120 @@ ${projectDataContext}
     *   TCHR53 Supervisor - Over Time Rate: $120.00/HR
     *   TCHR54 Supervisor - Natural Disaster Rate Outside Market Radius: $145.00/HR
     *   TCHR55 Supervisor - Natural Disaster Rate Within Market Radius: $125.00/HR
-    *   TCHR61 Per Diem Rate - Natural Disaster Outside Market Radius: $172.00/Day
-    *   TCHR62 Hourly Equipment Rate - traffic barrel - Normal Rate: $6.00/HR
-    *   TCHR63 Daily Equipment Rate - traffic barrel - Normal Rate: $20.00/DAY
-    *   TCHR64 Weekly Equipment Rate - traffic barrel - Normal Rate: $95.00/WK
-    *   TCHR65 Hourly Equipment Rate - work zone sign - Normal Rate: $6.00/HR
-    *   TCHR66 Daily Equipment Rate – work zone sign - Normal Rate: $28.00/DAY
-    *   TCHR67 Weekly Equipment Rate – work zone sign - Normal Rate: $95.00/WK
-    *   TCHR68 Hourly Equipment Rate - traffic cones - Normal Rate: $3.00/HR
-    *   TCHR69 Hourly Equipment Rate - traffic cones - Over time Rate: $5.00/HR
-    *   TCHR70 Daily Equipment Rate – traffic cones - Normal Rate: $20.00/DAY
-    *   TCHR71 Daily Equipment Rate – traffic cones - Over time Rate: $20.00/DAY
-    *   TCHR72 Weekly Equipment Rate – traffic cones - Normal Rate: $100.00/WK
-    *   TCHR73 Daily Equipment Rate - steel plate - Normal Rate: $125.00/DY
-    *   TCHR74 Weekly Equipment Rate - steel plate - Normal Rate: $120.00/WK
-    *   TCHR75 Monthly Equipment Rate - steel plate - Normal Rate: $250.00/MO
-    *   TCHR76 Hourly Vehicle rate - large vehicle - Normal Rate: $100.00/HR
-    *   TCHR77 Hourly Vehicle Rate - medium vehicle - Normal Rate: $75.00/HR
-    *   TCHR78 Hourly Vehicle Rate - small vehicle - Normal Rate: $40.00/HR
-    *   TCHR79 Hourly Equipment Rate - large equipment - Normal Rate: $125.00/HR
-    *   TCHR80 Hourly Equipment Rate - medium equipment - Normal Rate: $100.00/HR
-    *   TCHR81 Hourly Equipment Rate - Small Equipment (Other) - Normal Rate: $95.00/HR
-    *   TCHR82 Hourly Equipment Rate - small mechanical equipment (hand-held) - Normal Rate: $35.00/HR
-    *   TCHR83 Daily Equipment Rate - concrete barriers - Normal Rate: $75.00/DY
-    *   TCHR84 Weekly Equipment Rate - concrete barrier - Normal Rate: $65.00/WK
-    *   TCHR85 Monthly Equipment Rate - concrete barrier - Normal Rate: $270.00/MO
-    *   TCMU Material Mark-up: 5%
+    *   TCHR61 Per Diem Rate - Natural Disaster Outside Market Radius (Per DAY): $103.00
+    *   TCHR62 Hourly Equipment Rate - traffic barrel - Normal Rate (Per HR): $3.50
+    *   TCHR63 Daily Equipment Rate - traffic barrel - Normal Rate (Per DAY): $12.00
+    *   TCHR64 Weekly Equipment Rate - traffic barrel - Normal Rate (Per WK): $57.00
+    *   TCHR65 Hourly Equipment Rate - work zone sign - Normal Rate (Per HR): $3.50
+    *   TCHR66 Daily Equipment Rate - work zone sign - Normal Rate (Per DAY): $16.50
+    *   TCHR67 Weekly Equipment Rate - work zone sign - Normal Rate (Per WK): $57.00
+    *   TCHR68 Hourly Equipment Rate - traffic cones - Normal Rate (Per HR): $1.80
+    *   TCHR69 Hourly Equipment Rate - traffic cones - Over time Rate (Per HR): $3.00
+    *   TCHR70 Daily Equipment Rate - traffic cones - Normal Rate (Per DAY): $12.00
+    *   TCHR71 Daily Equipment Rate - traffic cones - Over time Rate (Per DAY): $12.00
+    *   TCHR72 Weekly Equipment Rate - traffic cones - Normal Rate (Per WK): $60.00
+    *   TCHR73 Daily Equipment Rate - steel plate - Normal Rate (Per DAY): $75.00
+    *   TCHR74 Weekly Equipment Rate - steel plate - Normal Rate (Per WK): $72.00
+    *   TCHR75 Monthly Equipment Rate - steel plate - Normal Rate (Per MO): $150.00
+    *   TCHR76 Hourly Vehicle rate - large vehicle - Normal Rate (Per HR): $60.00
+    *   TCHR77 Hourly Vehicle Rate - medium vehicle - Normal Rate (Per HR): $45.00
+    *   TCHR78 Hourly Vehicle Rate - small vehicle - Normal Rate (Per HR): $24.00
+    *   TCHR79 Hourly Equipment Rate - large equipment - Normal Rate (Per HR): $75.00
+    *   TCHR80 Hourly Equipment Rate - medium equipment - Normal Rate (Per HR): $60.00
+    *   TCHR81 Hourly Equipment Rate - Small Equipment (Other) - Normal Rate (Per HR): $57.00
+    *   TCHR82 Hourly Equipment Rate - small mechanical equipment (hand-held) - Normal Rate (Per HR): $21.00
+    *   TCHR83 Daily Equipment Rate - concrete barriers - Normal Rate (Per DAY): $45.00
+    *   TCHR84 Weekly Equipment Rate - concrete barrier - Normal Rate (Per WK): $39.00
+    *   TCHR85 Monthly Equipment Rate - concrete barrier - Normal Rate (Per MO): $162.00
+
+*   **MDU / Specialized**:
+    *   TEMDU-011 MDU MEETINGS (Per HR): $50.00
+    *   TMBT PLACE HEXATRONIC YARD CHAMBER/TOBY2 BOX (Per EA): $24.00
+    *   TMDU092-A FUSION SPLICE FIBER CABLE 1 to 15 Splices (Per EA): $24.00
+    *   TMDU092-B FUSION SPLICE FIBER CABLE 16 to 30 Splices (Per EA): $23.00
+    *   TMDU092-C FUSION SPLICE FIBER CABLE 31 to 50 Splices (Per EA): $20.00
+    *   TMDU092-D FUSION SPLICE FIBER CABLE 51 to 99 Splices (Per EA): $19.00
+    *   TMDU092-E FUSION SPLICE FIBER CABLE 100 & Above Splices (Per EA): $18.00
+    *   TMDU094-A REMOVE MOLDING, 1 to 15 Units (Per LU): $15.50
+    *   TMDU094-B REMOVE MOLDING, 16 to 30 Units (Per LU): $13.00
+    *   TMDU094-C REMOVE MOLDING, 31 to 50 Units (Per LU): $11.50
+    *   TMDU094-D REMOVE MOLDING, 51 to 99 Units (Per LU): $9.50
+    *   TMDU094-E REMOVE MOLDING, 100 & Above Units (Per LU): $8.00
+    *   TMDU096-A DRYWALL REPAIR 8"x8" to 12"x12" - 1 to 9 cut outs (Per EA): $43.00
+    *   TMDU096-B DRYWALL REPAIR 8"x8" to 12"x12" - 10 or more cut outs (Per EA): $36.00
+    *   TMDU096-C DRYWALL REPAIR 13"x13" to 18"x18" - 1 to 9 cut outs (Per EA): $47.00
+    *   TMDU096-D DRYWALL REPAIR 13"x13" to 18"x18" 10 or more cut outs (Per EA): $39.00
+    *   TMDU-013 CORE BORE -Greater than 2.5 to 4.0 Inch Diameter Hole up through 24 inches of material. 1 to 9 Hole(s). (Per EA): $90.00
+    *   TMDU-013-A CORE BORE - below 2.5 Inch Diameter Hole through greater than 12 inches of material. 1 to 9Hole(s). (Per EA): $80.00
+    *   TMDU-014 CORE BORE - Greater than 2.5 to 4.0 Inch Diameter Hole up through 24 inches of material. 10 or More Holes. (Per EA): $75.00
+    *   TMDU-014-A CORE BORE - below 2.5 Inch Diameter Hole through greater than 12 inches of material. 10 orMore Hole(s). (Per EA): $65.00
+    *   TMDU-015 CORE BORE - 4.1 to 5.0 Inch Diameter Hole up through 24 inches of material. 1 to 9 Hole(s). (Per EA): $99.00
+    *   TMDU-016 CORE BORE - 4.1 to 5.0 Inch Diameter Hole up through 24 inches of material. 10 or More Holes. (Per EA): $89.00
+    *   TMDU-021 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 1 to 9 Hole(s). (Per EA): $100.00
+    *   TMDU-022 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 10 or MoreHoles. (Per EA): $90.00
+    *   TMDU-023 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 1 to 9 Hole(s). (Per EA): $129.00
+    *   TMDU-024 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 24.1 to 36.0 inches of material. 10 or MoreHoles. (Per EA): $119.00
+    *   TMDU-029 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 36.1 inches and above of material. 1 to 9Hole(s). (Per EA): $134.00
+    *   TMDU-030 CORE BORE- 2.5 to 4.0 Inch Diameter Hole through 36.1 inches and above of material. 10 or More Holes. (Per EA): $124.00
+    *   TMDU-031 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 36.1 inches and above of material. 1 to 9Hole(s). (Per EA): $149.00
+    *   TMDU-032 CORE BORE - 4.1 to 5.0 Inch Diameter Hole through 36.1 inches and above of material. 10 or More Holes. (Per EA): $139.00
+    *   TMDU-047 PLACE TERMINAL BOX/EQUIPMENT/STORAGE BOX (Per EA): $20.00
+    *   TMDU-050A PLACE ELECTRICAL CONDUIT EMT IN CONJUNCTION WITH TURNKEY CONSTRUCTION UNITS (Per FT): $4.00
+    *   TMDU-050B PLACE ELECTRICAL CONDUIT EMT - NOT IN CONJUNCTION WITH TURNKEY CONSTRUCTIONUNITS (Per FT): $7.00
+    *   TMDU-054 HAND RODDING / BLOWN IN OCCUPIED DUCT (Per FT): $0.30
+    *   TMDU-055 HAND RODDING / BLOWN IN UN-OCCUPIED DUCT (Per FT): $0.00
+    *   TMDU-066 PLACE ADDITIONAL WIRE/CABLE/FIBER/INNERDUCT (Per FT): $0.30
+    *   TMDU-069 PLACE BACKBOARD & PROVIDE ENTRANCE HOLE (Per EA): $80.00
+    *   TMDU-075 TRIP CHARGE CREW RATE - 2 MEN (Per EA): $90.00
+    *   TMDU-076 INSTALL SMOOTH WALL INNERDUCT (Per FT): $2.00
+    *   TMDU-091 GROUND PENATRATING RADAR SURVEY, 1 to 9 Scan(s) (Per SCAN): $190.00
+    *   TMDU-092 GROUND PENATRATING RADAR SURVEY, 10 or more Scan(s) (Per SCAN): $160.00
+    *   TMDU-095-A PLACE NEW MOLDING (Per FT): $2.00
+    *   TMDU-095-B PLACE NEW MOLDING (Per FT): $1.00
+
+*   **Turnkey Construction (Per Living Unit)**:
+    *   TMDULU-001-A TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 1-15 UNITS (Per LU): $190.00
+    *   TMDULU-001-B TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 16-30 UNITS (Per LU): $185.00
+    *   TMDULU-001-C TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 31-50 UNITS (Per LU): $150.00
+    *   TMDULU-001-D TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 51-99 UNITS (Per LU): $145.00
+    *   TMDULU-001-E TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (Entry to LU) MDU 100 AND GREATER UNITS (Per LU): $135.00
+    *   TMDULU-002-A TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 1-15 UNITS (Per LU): $180.00
+    *   TMDULU-002-B TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 16-30 UNITS (Per LU): $175.00
+    *   TMDULU-002-C TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 31-50 UNITS (Per LU): $140.00
+    *   TMDULU-002-D TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (Entry to LU) MDU 51-99 UNITS (Per LU): $135.00
+    *   TMDULU-002-E TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP (Entry to LU) MDU 100 AND GREATERUNITS (Per LU): $130.00
+    *   TMDULU-003 MDU PREPARATION PER FLOOR (Per FL): $500.00
+    *   TMDULU-004-A TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 1-15 UNITS (Per LU): $145.00
+    *   TMDULU-004-B TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 16-30 UNITS (Per LU): $145.00
+    *   TMDULU-004-C TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 31-50 UNITS (Per LU): $125.00
+    *   TMDULU-004-D TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 51-99 UNITS (Per LU): $125.00
+    *   TMDULU-004-E TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (No Entry to LU) MDU 100 AND GREATER UNITS (Per LU): $120.00
+    *   TMDULU-005-A TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 1-15 UNITS (Per LU): $135.00
+    *   TMDULU-005-B TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 16-30 UNITS (Per LU): $135.00
+    *   TMDULU-005-C TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 31-50 UNITS (Per LU): $120.00
+    *   TMDULU-005-D TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 51-99 UNITS (Per LU): $120.00
+    *   TMDULU-005-E TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (No Entry to LU) MDU 100 AND GREATER UNITS (Per LU): $115.00
+    *   TMDULU-006-A TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 1-15UNITS (Per LU): $95.00
+    *   TMDULU-006-B TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 16-30 UNITS (Per LU): $90.00
+    *   TMDULU-006-C TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 31-50UNITS (Per LU): $75.00
+    *   TMDULU-006-D TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 51-99 UNITS (Per LU): $70.00
+    *   TMDULU-006-E TURNKEY CONSTRUCTION (TWO STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 100 AND GREATER UNITS (Per LU): $65.00
+    *   TMDULU-007-A TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 1-15 UNITS (Per LU): $90.00
+    *   TMDULU-007-B TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 16-30 UNITS (Per LU): $85.00
+    *   TMDULU-007-C TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 31-50UNITS (Per LU): $70.00
+    *   TMDULU-007-D TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 51-99 UNITS (Per LU): $65.00
+    *   TMDULU-007-E TURNKEY CONSTRUCTION (ONE STEP) PER LIVING UNIT, (Half Fee Incomplete) MDU 100 ANDGREATER UNITS (Per LU): $60.00
+    *   TMDULU-008-A TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 1-15 UNITS (Per LU): $165.00
+    *   TMDULU-008-B TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 16-30 UNITS (Per LU): $160.00
+    *   TMDULU-008-C TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 31-50 UNITS (Per LU): $145.00
+    *   TMDULU-008-D TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 51-99 UNITS (Per LU): $140.00
+    *   TMDULU-008-E TURNKEY CONSTRUCTION PER LIVING UNIT-TWO STEP, (GREENFIELD) MDU 100 AND GREATERUNITS (Per LU): $125.00
+    *   TMDULU-009-A TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 1-15 UNITS (Per LU): $155.00
+    *   TMDULU-009-B TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 16-30 UNITS (Per LU): $150.00
+    *   TMDULU-009-C TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 31-50 UNITS (Per LU): $135.00
+    *   TMDULU-009-D TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 51-99 UNITS (Per LU): $130.00
+    *   TMDULU-009-E TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 100 AND GREATERUNITS (Per LU): $120.00
+    *   TMDULU-022 SECURITY ADDER (Per LU): $90.00
 
 ## SECTION 6B: LIGHTSPEED SUBCONTRACTOR RATE CARD (Tillman Fiber 2024 - Revised 1/31/2025)
 *   **Aerial**:
@@ -686,12 +776,12 @@ ${projectDataContext}
 *   **Ticket Life**: Generally 30 days (state dependent). Renewal required if expired.
 *   **Tolerance Zone**: 24 inches (approx) from outer edge of utility markings. Hand dig only in this zone.
 *   **Positive Response**: Check 811 system for utility responses (Clear/Marked/Conflict) before digging.
-*   **Damages**: Stop work immediately. Secure the area. Notify Supervisor and Utility Owner. Take photos.
+*   **Damages**: Stop work immediately. Secure the area. Notify Supervisor and Utility Owner. Take photos with provided damage hit kit.
 
 ## SECTION 9: SAFETY & COMPLIANCE
 *   **PPE**: Hard hat, safety vest (Class 2/3), steel-toe boots, safety glasses required at all times.
 *   **Traffic Control**: MUTCD standards must be followed for lane closures/shoulder work.
-*   **Tailgate Meetings**: Daily safety briefing required before work starts. Signed log needed.
+*   **Tailgate Meetings**: Daily safety briefing required before work starts.
 
 ## SECTION 10: FILE NAMING & REPORTING PROCEDURES
 *   **Project Naming Convention**: All files should generally follow: \`Date, Document Type, Project Name\`.
@@ -712,9 +802,24 @@ ${projectDataContext}
         5. Click on the created work shift form to enter all remaining information.
 *   **Submission**: Your redlines and all other information combined in one zip file should be sent to **Tillman Production**.
 
-## SECTION 11: PRODUCTION SUBMISSION & APPROVAL
+## SECTION 11: PRODUCTION SUBMISSION & APPROVAL FOR SUBCONTRACTOR INVOICING
 *   **Daily Submission**: Production should be submitted daily so it can be Level 1 and 2 approved daily. If it is not, we cannot guarantee that all production will be Level 2 approved by the pay close cut off.
-*   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, has been uploaded onto the task on the FORMS tab.
+    *   Steps:
+        1. Goto [Penguin Data](https://fullcircle.penguindata.com/login).
+        2. Enter your username and password.
+        3. Choose Standard and click Sign in.
+        4. Make sure you are in the correct office enviroment in the top left of the screen. (e.g. Clearwater, Polk, Manatee, Citruss, Miami)
+        5. Click on the Projects link on the top of the screen.
+        6. Click on Project Data and choose Manage Project.
+        7. Look for the Functions button on the top right of the screen and click it.
+        8. In the search drop down type the name of your project and click search. (e.g. BHT-FOE-03)
+        9. A popup will appear with the project and its associated tasks.
+        10. Click on the task name you would like to submit or approve production for. Phase 1 is for Construction Production and Phase 2 is for Fiber Production.
+        11. Verify the subcontractor's backup on the Forms tab.
+        12. Click the Billing Tab and verify Pending Mobile Entered Codes. If there are any codes listed here for approval you must select the Save checkbox.
+        13. Once you have selected all the billing codes you will be approving, scroll to the bottom of the screen and click the Submit Button.
+
+*   **Documentation Required**: No production should be entered or approved at the Level 1 stage unless **all** accompanying documentation, including all pictures, have been uploaded onto the task on the FORMS tab.
 *   **Task Assignment**:
     *   All **construction** work falls on the **Phase 1** task.
     *   All **fiber** work falls on the **Phase 2** task.
@@ -788,8 +893,8 @@ ${projectDataContext}
     4.  Choose option starting with \`custom-input-text_\`.
     5.  Return to main screen, click clock icon again.
     6.  Click "Display custom text on camera".
-    7.  Input format: \`ProjectName-Sheet#\` (e.g., \`D-HDH60-Sheet5\`).
-*   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#_DateTime.jpg\`.
+    7.  Input format: \`ProjectName-Sheet#-Type of Picture(Toby, Dap, Hand Hole Etc)\` (e.g., \`D-HDH60-Sheet5-Toby\`).
+*   **Note**: Update this number when moving to a new sheet. All photos will autosave as \`ProjectName-Sheet#-Type of Picture(Toby, Dap, Hand Hole Etc)_DateTime.jpg\`.
 
 ## SECTION 15: IMPORTANT LINKS
 1.  **Tillman Project SharePoint**: [SharePoint](https://lightspeedconstructiongroup.sharepoint.com/sites/ClearwaterSupervisors/SitePages/ProjectHome.aspx)
@@ -804,43 +909,8 @@ ${projectDataContext}
 10. **OneStepGPS (Vehicle Tracking)**: [OneStepGPS](https://track.onestepgps.com/v3/auth/login?r=https://track.onestepgps.com/v3/ux/map)
 
 ## SECTION 16: MANDATORY LINKING RULES
-*   **Contractor Invoicing**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
+*   **Contractor and Subcontractor Invoicing And Production**: ALWAYS provide this link: [Penguin Data](https://fullcircle.penguindata.com/login)
 *   **Maps / Asbuilts / End of Shifts (EOS)**: ALWAYS provide this link: [Share Drive](https://lightspeedconstructiongroup.sharepoint.com/sites/SoutheastRegion-TillmanFiberProject/Shared%20Documents/Forms/AllItems.aspx?id=%2Fsites%2FSoutheastRegion%2DTillmanFiberProject%2FShared%20Documents%2FTillman%20Fiber%20Project)
 *   **Project Specifics**: When answering about specific project details (status, cost, etc.), ALWAYS include this link: [Project Summary Data](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/ETFA0lynl1BPjXCjpf5ujnIB8_SxhhTuIUXyBj_mezjgoA?e=LTUMSD&web=1)
-*   **Locates / Digging**: When answering about locates, ALWAYS include this link: [Sunshine 811](https://exactix.sunshine811.com/login)
+*   **Locates / Digging**: When answering about locates, ALWAYS include these links: [Sunshine 811](https://exactix.sunshine811.com/login), [Locate Tracker](https://lightspeedconstructiongroup.sharepoint.com/:x:/s/SoutheastRegion-TillmanFiberProject/EdvfutoSOu1GjODYhk1aFEkBbm3WQj1UA2VCNUdg71tj3Q?e=0eslHQ&web=1)
 `;
-
-      
-      const currentDate = new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
-
-      const systemInstruction = `You are a knowledgeable AI assistant for Tillman Fiber and Lightspeed Construction Group.
-Current Date: ${currentDate}
-
-CRITICAL DATA AVAILABILITY STATUS:
-${projectData && projectData.length > 0 ? "ONLINE - Project Data Available" : "OFFLINE - NO PROJECT DATA"}
-
-CRITICAL INSTRUCTIONS:
-1.  **IF PROJECT DATA IS OFFLINE**: You MUST NOT answer questions about specific project numbers, status, or supervisors.
-2.  **IF PROJECT DATA IS ONLINE**: Use the "LIVE PROJECT DATA" section to answer.
-3.  **Real-Time Data**: You have access to Google Search and Google Maps tools. Use them to find current weather, verify location data, or look up recent news affecting construction.
-4.  **Geolocation**: If the user asks about "this area" or "local weather", use the provided latitude/longitude in the tool config.
-5.  **Procedures**: Always use the knowledge base for procedure questions (BOM, NTP, Safety, etc.) regardless of data status.
-6.  **No Hallucinations**: NEVER invent project details. If a project isn't in the list, say so.
-7.  **Tone**: Professional but friendly.
-8.  **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant. **Do not start every response by stating your name. Only state it if asked.**
-9.  **Linking**: You MUST use Markdown [Title](URL) for links.
-10. **Locate Tickets Formatting**: When asked for locate tickets, you **MUST** use the following specific bulleted format for every ticket:
-    *   **Tickets:** [Ticket Number], Phone: [Phone Number], Status: [Status], Due: [Due Date], Expires: [Expire Date]
-11. **Rate Cards**: Distinguish between the "Standard Rate Card" (Internal) and "Subcontractor Rate Card" (External). If a user asks for a rate, check both and clarify the difference.
-12. **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
-13. **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
-14. **New Data Fields**: 
-    *   **HHP**: Refers to "Serviceable Addresses" or "Households Passed".
-    *   **SOW Estimated Cost**: The estimated cost for the project.
-    *   **On Track or In Jeopardy**: The health status of the project.
-15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
-16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
-17. **Math & Totals**: The "LIVE PROJECT DATA" contains pre-calculated footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
-
-KNOWLEDGE BASE & LIVE PROJECT DATA:
-${knowledgeBase}`;
