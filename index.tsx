@@ -1883,9 +1883,9 @@ ${knowledgeBase}`;
           <div className="flex items-center gap-3">
              <div className="h-10 w-auto flex items-center justify-center">
                 <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
-                <img src="./nexus-logo-master.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
-             </div>
+              </div>
             <div>
+              <img src="./nexus-logo-master.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
               <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
               <p className="text-gray-300 text-xs hidden sm:block">AI-powered Construction & Project Intelligence</p>
             </div>
