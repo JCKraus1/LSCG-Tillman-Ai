@@ -756,6 +756,435 @@ ${projectDataContext}
     *   TMDULU-009-E TURNKEY CONSTRUCTION PER LIVING UNIT-ONE STEP, (GREENFIELD) MDU 100 AND GREATERUNITS (Per LU): $120.00
     *   TMDULU-022 SECURITY ADDER (Per LU): $90.00
 
+## SECTION 6C: TILLMAN FIBER EMPLOYEE RATE CARD
+*   ** AERIAL PLACEMENT **
+
+    * TCA1: Place Aerial - Strand 6M to 6.6M: $0.20/FT
+    * TCA1A: Place Aerial - Anchor and Rod (Mechanical): $15.00/EA
+    * TCA1B: Place Aerial - Anchor and Rod (Hand-Dig): $15.00/EA
+    * TCA2: Place Aerial - Stand 10M to 25M: $0.30/FT
+    * TCA3: Place Aerial - Self-support Fiber: $0.35/FT
+    * TCA4: Place Aerial - Self-support Flexible Duct: $0.35/FT
+    * TCA5: Place Aerial - Total Bundle (Route <2500'): $0.40/FT
+    * TCA6: Place Aerial - Total Bundle (Route >5000'): $0.38/FT
+    * TCA7: Place Aerial - Total Bundle (Route <5000'): $0.36/FT
+    * TCMTT: Aerial - Tree Trimming: $0.25/FT
+
+*   ** BURIED PLACEMENT - DIRECTIONAL BORE **
+
+    * TCBDB2: Directional Bore - Standard (≤4.0" OD Bundle): $2.00/FT
+    * TCBDB4: Directional Bore - Standard (>4.0" to 7.0" OD Bundle): $3.00/FT
+    * TCBDB8: Directional Bore - Rock (≤4.0" OD Bundle): $5.00/FT
+    * TCBDB9: Directional Bore - Rock (>4.0" to 7.0" OD Bundle): $6.00/FT
+
+*   ** BURIED PLACEMENT - HAND DIG **
+
+    * TCBHD1: Hand Dig - 6" Cover: $1.00/FT
+    * TCBHD2: Hand Dig - 7" through 12" Cover: $1.25/FT
+    * TCBHD3: Hand Dig - 12" through 18" Cover: $1.50/FT
+    * TCBHD4: Hand Dig - 19" through 24" Cover: $1.75/FT
+    * TCBHD5: Hand Dig - 25" through 36" Cover: $2.00/FT
+    * TCBHD6: Hand Dig - 37" through 48" Cover: $2.25/FT
+    * TCBHD7: Hand Dig - Additional Depth in 6" Increments: $0.25/FT
+
+*   ** BURIED PLACEMENT - MECHANICAL **
+
+    * TCBP1: Mechanical - 6" Cover: $1.00/FT
+    * TCBP2: Mechanical - 7" through 12" Cover: $1.00/FT
+    * TCBP3: Mechanical - 12" through 18" Cover: $1.00/FT
+    * TCBP4: Mechanical - 19" through 24" Cover: $1.00/FT
+    * TCBP5: Mechanical - 25" through 36" Cover: $1.00/FT
+    * TCBP6: Mechanical - 37" through 48" Cover: $1.00/FT
+    * TCBP7: Mechanical - Additional Depth in 6" Increments: $0.25/FT
+
+*   ** BURIED PLACEMENT - MISSILE BORE **
+
+    * TCBMB1: Missile Bore - Up to 4.0" OD Bundle: $2.00/FT
+    * TCBMB2: Missile Bore - Over 4.0" to 7.0" OD Bundle: $3.00/FT
+
+*   ** BURIED SERVICE WIRE (BSW) **
+
+    * TCBSW3: Buried Service Drop and Duct-Pull: $0.35/FT
+    * TCBSW4: Buried Service Drop in Duct-Pull Method: $0.20/FT
+    * TCBSW4B: Buried Service Drop in Duct-Blowing Method: $0.30/FT
+    * TCBSW5: Buried Service Drop or Microduct: $0.30/FT
+    * TCBSW6: Rod and Place Pull Tape in Innerduct for BSW: $0.35/FT
+    * TCBSW7: Rod and Slug Innerduct for BSW: $0.40/FT
+    * TCBSW8: Locate Conduit End for BSW: $0.07/FT
+    * TCBSW9: Handhole Associated with One Fiber BSW: $30.00/EA
+    * TCBSW10: Each Additional Drop Same Trench: $0.08/FT
+    * TCBSW11: Additional Innerduct up to 2 Inches: $0.30/FT
+    * TCBSW12: Each Additional Drop in Innerduct: $0.30/FT
+    * TCBSW13: Road/Driveway Bore/Pull (Drop): $3.00/FT
+    * TCBSW14: Bore - Each Additional Innerduct: $0.25/FT
+    * TCBSW15: Each Buried Drop Facility in Open Path/Trench: $0.12/FT
+    * TCBSW16: Intercept Existing Duct: $12.00/EA
+    * TCBSW17: Trip Charge - Single/Individual Rate: $14.00/EA
+    * TCBSW18: Trip Charge - Crew Rate: $50.00/EA
+
+*   ** BURIED MAINTENANCE & SUPPORT **
+
+    * TCM7: Maintain - Straighten, Raise, or Lower Handhole: $40.00/EA
+    * TCM8: Maintain - Dig and Backfill Splice Pit (Up to 30 cu. ft.): $70.00/EA
+    * TCM9: Maintain - Dig and Backfill Splice Pit (30-60 cu. ft.): $95.00/EA
+    * TCM10: Maintain - Dig and Backfill Splice Pit (Over 60 cu. ft.): $2.50/CUFT
+    * TCM11: Maintain - Pothole Existing Buried Facilities: $25.00/EA
+    * TCM12: Maintain - Replace Flowerpot or Handhole Lid: $10.00/EA
+    * TCM13: Move Charge - Buried: $50.00/EA
+    * TCM14: Select Backfill: $1.10/CUFT
+
+*   ** BURIED COMPONENTS & ACCESSORIES **
+
+    * TCMB1: Drop Wire Terminal: $12.00/EA
+    * TCMB2: Flowerpot: $12.00/EA
+    * TCMB3A: Handhole 13x24x18: $25.00/EA
+    * TCMB3B: Handhole 17x30x24: $50.00/EA
+    * TCMB3C: Handhole 24x36x24: $55.00/EA
+    * TCMB4: Handhole 30x48x36: $90.00/EA
+    * TCMB5: Locate Wire - Primary Function: $0.20/FT
+    * TCMB6: Locate Wire in Duct - Primary Function: $0.12/FT
+    * TCMB7: Locate Wire/Locate Wire in Duct - Secondary Function: $0.08/FT
+    * TCMB8: Ground Rod - Primary Function: $10.00/EA
+    * TCMB9: Ground Rod System - Primary Function: $18.00/EA
+    * TCMB10: Ground Wire: $0.40/FT
+    * TCMB11: Ground Rod - Secondary Function: $7.50/EA
+    * TCMB12: Relocate Existing Buried Facilities: $1.00/FT
+    * TCMB13: Intercept - Encased Conduit (Concrete): $86.00/EA
+    * TCMB14: Intercept - Conduit: $0.55/FT
+    * TCMB15: Locate - Conduit End: $20.00/EA
+    * TCMB16: Asphalt in 6" Depth Increments: $4.00/SQFT
+    * TCMB17: Concrete in 6" Depth Increments: $5.00/SQFT
+    * TCMB19: Formed Concrete: $7.50/CUYD
+    * TCMB20: Unformed Concrete: $7.50/CUYD
+    * TCMB21: Dowel Concrete: $9.00/EA
+    * TCMB22: Core Bore - Manhole: $60.00/EA
+    * TCMB23: Core Bore - Building Entrance: $40.00/EA
+    * TCMB24: Pull Line - All Types: $0.07/FT
+    * TCMB25: 6x6 Post: $8.00/EA
+    * TCMB26: Remote OLT Node in Optmius Pedestal: $37.00/EA
+    * TCMB27: Power Meter Base: $30.00/EA
+    * TCMB28: Alpha Power Cabinet: $80.00/EA
+    * TCMB29: OLT Cabinet: $90.00/EA
+    * TCMB30: Equipment and Pad (Up to 10 sq. ft.): $300.00/EA
+    * TCMB31: Equipment and Pad (10-30 sq. ft.): $400.00/EA
+    * TCMB32: Equipment and Pad (30-50 sq. ft.): $600.00/EA
+    * TCMB33: Equipment and Pad (50-100 sq. ft.): $750.00/EA
+    * TCMB34: Concrete Pad (Up to 10 sq. ft.): $100.00/EA
+    * TCMB35: Concrete Pad (10-30 sq. ft.): $175.00/EA
+    * TCMB36: Concrete Pad (30-50 sq. ft.): $300.00/EA
+    * TCMB37: Concrete Pad (50-100 sq. ft.): $400.00/EA
+
+*   ** MICRO TRENCHING **
+
+    * TCMT1: Micro Trenching 1"-9": $2.75/FT
+    * TCMT2: Micro Trenching 9"-16": $2.75/FT
+    * TCMT3: Micro Trenching 16"-26": $2.75/FT
+
+*   ** UNDERGROUND PLACEMENT **
+
+    * TCU1: Cable, Wire, or Pipe in Open Conduit - Pull Method: $0.30/FT
+    * TCU1B: Conventional Cable, Wire, or Pipe in Open Conduit - Blowing Method: $0.30/FT
+    * TCU3: Additional Cable, Wire, or Pipe Simultaneously: $0.12/FT
+    * TCU4: Pull Tape/Wire in Conduit/Innerduct: $0.16/FT
+    * TCU5: Additional Pull Tape/Wire in Conduit/Innerduct: $0.10/FT
+    * TCU12: Remove Cable, Fiber, Wire, or Pipe: $0.10/FT
+    * TCU13: Remove Additional Facility Removed Simultaneously: $0.05/FT
+    * TCUB: Micro Uni-tube Fiber Optic Cable in Open Micro Duct - Blowing Method: $0.10/FT
+    * TCUB1: Hexatronic Stingray Drop/Cable (2-24 Fibers in 7/3.5mm Microduct) - Blowing Method: $40.00/EA
+
+*   ** ELECTRONICS & TURNUP **
+
+    * TCE1: OLT Cabinet - Placement, Testing & Turnup: $187.50/LOC
+    * TCE2: OLT Clam Shell - Placement, Testing & Turnup: $155.00/LOC
+    * TCE3: OLT Strand - Placement, Testing & Turnup: $97.50/LOC
+
+*   ** FIBER DISTRIBUTION EQUIPMENT **
+
+    * TCMU1: Placement of FDH/OLT - Vault Mounted: $85.00/EA
+    * TCMU2: Placement of FDH/OLT - Pole Mounted: $100.00/EA
+    * TCMU3: Placement of FDH/OLT - Wall/Rack Mounted: $100.00/EA
+    * TCMU4: Placement of FDH/OLT - Vault/Sub-surface Mounted: $95.00/EA
+    * TCMU4A: Turnkey Place/Replace FDH Closure/Swing Arm Mounted: $30.00/EA
+    * TCMU5: Placement of FDT - Vault Mounted (FlexNap): $16.00/EA
+    * TCMU6: Placement of FDT - Pole Mounted (FlexNap): $18.00/EA
+    * TCMU7: Placement of FDT - Wall/Rack Mounted (FlexNap): $16.00/EA
+    * TCMU8: Placement of FDT - Vault/Sub-surface Mounted (FlexNap): $16.00/EA
+    * TCMU9: Placement of FDT - Building (SFU/MDU/MTU): $30.00/EA
+
+*   ** BOLLARDS & BARRIERS **
+
+    * TCSP1: Placement of Bollard (Materials and Labor Only): $40.00/EA
+    * TCSP2: Placement of Bollard (Materials, Labor, and Bollard): $80.00/EA
+
+*   ** SPLICING - CABLE ONLY **
+
+    * TCSS1: Splice - Fiber Optic Loose Tube Cable ≤96 Fibers: $7.00/EA
+    * TCSS2: Splice - Fiber Optic Ribbon Cable ≤96 Fibers: $3.00/EA
+    * TCSS3: Splice - Fiber Optic Loose Tube Cable >96 Fibers: $6.00/EA
+    * TCSS4: Splice - Fiber Optic Ribbon Cable >96 Fibers: $3.00/EA
+    * TCSS8: Splicing - Wastewater Removal: $18.00/EA
+
+*   ** SPLICING - TERMINAL CLOSURE **
+
+    * TCSS9: Prep, Splice & Place Terminal Closure (Primary/Secondary) - Ribbon Cable ≤12 Fibers: $48.00/EA
+    * TCSS11: Prep, Splice & Place Terminal Closure (Primary/Secondary) - Loose Tube Cable ≤12 Fibers: $48.00/EA
+    * TCSSM: Splice Micro Duct at Lateral: $1.50/EA
+    * TCSSMD: Splice Micro Duct at Duct Access Point (DAP): $1.50/EA
+
+*   ** FUSION SPLICING (MDU) **
+
+    * TMDU092-A: Fusion Splice - 1 to 15 Splices: $10.00/EA
+    * TMDU092-B: Fusion Splice - 16 to 30 Splices: $9.50/EA
+    * TMDU092-C: Fusion Splice - 31 to 50 Splices: $8.50/EA
+    * TMDU092-D: Fusion Splice - 51 to 99 Splices: $8.50/EA
+    * TMDU092-E: Fusion Splice - 100+ Splices: $7.50/EA
+
+*   ** HOURLY RATES - TRUCK DRIVER **
+
+    * TCHR1: CDL Truck Driver - Differential Rate: $15.00/HR
+    * TCHR2: CDL Truck Driver - Normal Rate: $12.50/HR
+    * TCHR3: CDL Truck Driver - Overtime Rate: $18.75/HR
+    * TCHR4: CDL Truck Driver - Natural Disaster Rate (Outside Market Radius): $22.50/HR
+    * TCHR5: CDL Truck Driver - Natural Disaster Rate (Within Market Radius): $23.75/HR
+
+*   ** HOURLY RATES - ELECTRICIAN **
+
+    * TCHR6: Electrician - Differential Rate: $30.00/HR
+    * TCHR7: Electrician - Normal Rate: $22.50/HR
+    * TCHR8: Electrician - Overtime Rate: $33.75/HR
+    * TCHR9: Electrician - Natural Disaster Rate (Outside Market Radius): $43.75/HR
+    * TCHR10: Electrician - Natural Disaster Rate (Within Market Radius): $38.75/HR
+
+*   ** HOURLY RATES - FLAGGER **
+
+    * TCHR11: Flagger - Differential Rate: $8.75/HR
+    * TCHR12: Flagger - Normal Rate: $10.00/HR
+    * TCHR13: Flagger - Overtime Rate: $15.00/HR
+    * TCHR14: Flagger - Natural Disaster Rate (Outside Market Radius): $18.75/HR
+    * TCHR15: Flagger - Natural Disaster Rate (Within Market Radius): $16.25/HR
+
+*   ** HOURLY RATES - GENERAL LABORER **
+
+    * TCHR16: General Laborer - Differential Rate: $12.50/HR
+    * TCHR17: General Laborer - Normal Rate: $10.00/HR
+    * TCHR18: General Laborer - Overtime Rate: $13.75/HR
+    * TCHR19: General Laborer - Natural Disaster Rate (Outside Market Radius): $18.75/HR
+    * TCHR20: General Laborer - Natural Disaster Rate (Within Market Radius): $16.25/HR
+
+*   ** HOURLY RATES - JOURNEYMAN **
+
+    * TCHR21: Journey Man - Differential Rate: $27.50/HR
+    * TCHR22: Journey Man - Normal Rate: $25.00/HR
+    * TCHR23: Journey Man - Overtime Rate: $37.50/HR
+    * TCHR24: Journey Man - Natural Disaster Rate (Outside Market Radius): $47.50/HR
+    * TCHR25: Journey Man - Natural Disaster Rate (Within Market Radius): $37.50/HR
+
+*   ** HOURLY RATES - LINEMAN **
+
+    * TCHR26: Lineman - Differential Rate: $18.75/HR
+    * TCHR27: Lineman - Normal Rate: $17.50/HR
+    * TCHR28: Lineman - Overtime Rate: $26.25/HR
+    * TCHR29: Lineman - Natural Disaster Rate (Outside Market Radius): $41.25/HR
+    * TCHR30: Lineman - Natural Disaster Rate (Within Market Radius): $28.75/HR
+
+*   ** HOURLY RATES - MACHINE OPERATOR **
+
+    * TCHR31: Machine Operator - Differential Rate: $17.50/HR
+    * TCHR32: Machine Operator - Normal Rate: $15.00/HR
+    * TCHR33: Machine Operator - Overtime Rate: $21.25/HR
+    * TCHR34: Machine Operator - Natural Disaster Rate (Outside Market Radius): $36.25/HR
+    * TCHR35: Machine Operator - Natural Disaster Rate (Within Market Radius): $28.75/HR
+
+*   ** HOURLY RATES - SKILLED LABORER **
+
+    * TCHR41: Skilled Laborer - Differential Rate: $17.00/HR
+    * TCHR42: Skilled Laborer - Normal Rate: $15.00/HR
+    * TCHR43: Skilled Laborer - Overtime Rate: $21.25/HR
+    * TCHR44: Skilled Laborer - Natural Disaster Rate (Outside Market Radius): $28.75/HR
+    * TCHR45: Skilled Laborer - Natural Disaster Rate (Within Market Radius): $22.50/HR
+
+*   ** HOURLY RATES - SPLICER **
+
+    * TCHR46: Splicer - Differential Rate: $22.50/HR
+    * TCHR47: Splicer - Normal Rate: $20.00/HR
+    * TCHR48: Splicer - Overtime Rate: $28.87/HR
+    * TCHR49: Splicer - Natural Disaster Rate (Outside Market Radius): $40.00/HR
+    * TCHR50: Splicer - Natural Disaster Rate (Within Market Radius): $31.25/HR
+
+*   ** HOURLY RATES - SUPERVISOR **
+
+    * TCHR51: Supervisor - Differential Rate: $25.00/HR
+    * TCHR52: Supervisor - Normal Rate: $21.25/HR
+    * TCHR53: Supervisor - Overtime Rate: $30.00/HR
+    * TCHR54: Supervisor - Natural Disaster Rate (Outside Market Radius): $36.25/HR
+    * TCHR55: Supervisor - Natural Disaster Rate (Within Market Radius): $31.25/HR
+
+*   ** PER DIEM & DAILY RATES **
+
+    * TCHR61: Per Diem Rate - Natural Disaster (Outside Market Radius): $43.00/DAY
+
+*   ** EQUIPMENT RATES - TRAFFIC CONTROL **
+
+    * TCHR62: Traffic Barrel - Hourly: $1.50/HR
+    * TCHR63: Traffic Barrel - Daily: $5.00/DAY
+    * TCHR64: Traffic Barrel - Weekly: $23.75/WK
+    * TCHR65: Work Zone Sign - Hourly: $1.50/HR
+    * TCHR66: Work Zone Sign - Daily: $7.00/DAY
+    * TCHR67: Work Zone Sign - Weekly: $23.75/WK
+    * TCHR68: Traffic Cones - Hourly: $0.75/HR
+    * TCHR69: Traffic Cones - Overtime (Hourly): $1.25/HR
+    * TCHR70: Traffic Cones - Daily: $5.00/DAY
+    * TCHR71: Traffic Cones - Overtime (Daily): $5.00/DAY
+    * TCHR72: Traffic Cones - Weekly: $25.00/WK
+
+*   ** EQUIPMENT RATES - STRUCTURAL **
+
+    * TCHR73: Steel Plate - Daily: $31.25/DAY
+    * TCHR74: Steel Plate - Weekly: $30.00/WK
+    * TCHR75: Steel Plate - Monthly: $62.50/MO
+    * TCHR83: Concrete Barriers - Daily: $18.75/DAY
+    * TCHR84: Concrete Barrier - Weekly: $16.25/WK
+    * TCHR85: Concrete Barrier - Monthly: $67.50/MO
+
+*   ** VEHICLE RATES **
+
+    * TCHR76: Large Vehicle - Hourly: $25.00/HR
+    * TCHR77: Medium Vehicle - Hourly: $18.75/HR
+    * TCHR78: Small Vehicle - Hourly: $10.00/HR
+
+*   ** EQUIPMENT RATES - OPERATIONAL **
+
+    * TCHR79: Large Equipment - Hourly: $31.25/HR
+    * TCHR80: Medium Equipment - Hourly: $25.00/HR
+    * TCHR81: Small Equipment (Other) - Hourly: $23.75/HR
+    * TCHR82: Small Mechanical Equipment (Hand-held) - Hourly: $8.75/HR
+
+*   ** MDU/TURNKEY CONSTRUCTION - TWO STEP (With Entry to LU) **
+
+    * TMDULU-001-A: MDU 1-15 Units: $65.00/LU
+    * TMDULU-001-B: MDU 16-30 Units: $62.00/LU
+    * TMDULU-001-C: MDU 31-50 Units: $52.00/LU
+    * TMDULU-001-D: MDU 51-99 Units: $50.00/LU
+    * TMDULU-001-E: MDU 100+ Units: $45.00/LU
+
+*   ** MDU/TURNKEY CONSTRUCTION - ONE STEP (With Entry to LU) **
+
+    * TMDULU-002-A: MDU 1-15 Units: $62.00/LU
+    * TMDULU-002-B: MDU 16-30 Units: $60.00/LU
+    * TMDULU-002-C: MDU 31-50 Units: $49.00/LU
+    * TMDULU-002-D: MDU 51-99 Units: $47.00/LU
+    * TMDULU-002-E: MDU 100+ Units: $45.00/LU
+
+*   ** MDU/TURNKEY CONSTRUCTION - TWO STEP (No Entry to LU) **
+
+    * TMDULU-004-A: MDU 1-15 Units: $49.00/LU
+    * TMDULU-004-B: MDU 16-30 Units: $49.00/LU
+    * TMDULU-004-C: MDU 31-50 Units: $42.00/LU
+    * TMDULU-004-D: MDU 51-99 Units: $42.00/LU
+    * TMDULU-004-E: MDU 100+ Units: $41.00/LU
+
+*** MDU/TURNKEY CONSTRUCTION - ONE STEP (No Entry to LU) **
+
+    * TMDULU-005-A: MDU 1-15 Units: $46.00/LU
+    * TMDULU-005-B: MDU 16-30 Units: $46.00/LU
+    * TMDULU-005-C: MDU 31-50 Units: $40.00/LU
+    * TMDULU-005-D: MDU 51-99 Units: $40.00/LU
+    * TMDULU-005-E: MDU 100+ Units: $39.00/LU
+
+*   ** MDU/TURNKEY CONSTRUCTION - TWO STEP (Half Fee Incomplete) **
+
+    * TMDULU-006-A: MDU 1-15 Units: $32.00/LU
+    * TMDULU-006-B: MDU 16-30 Units: $31.00/LU
+    * TMDULU-006-C: MDU 31-50 Units: $27.00/LU
+    * TMDULU-006-D: MDU 51-99 Units: $25.00/LU
+    * TMDULU-006-E: MDU 100+ Units: $23.00/LU
+
+*   ** MDU/TURNKEY CONSTRUCTION - ONE STEP (Half Fee Incomplete) **
+
+    * TMDULU-007-A: MDU 1-15 Units: $31.00/LU
+    * TMDULU-007-B: MDU 16-30 Units: $30.00/LU
+    * TMDULU-007-C: MDU 31-50 Units: $24.00/LU
+    * TMDULU-007-D: MDU 51-99 Units: $24.00/LU
+    * TMDULU-007-E: MDU 100+ Units: $23.00/LU
+
+*   ** MDU/TURNKEY CONSTRUCTION - TWO STEP (Greenfield) **
+
+    * TMDULU-008-A: MDU 1-15 Units: $57.00/LU
+    * TMDULU-008-B: MDU 16-30 Units: $54.00/LU
+    * TMDULU-008-C: MDU 31-50 Units: $49.00/LU
+    * TMDULU-008-D: MDU 51-99 Units: $47.00/LU
+    * TMDULU-008-E: MDU 100+ Units: $43.00/LU
+
+*   ** MDU/TURNKEY CONSTRUCTION - ONE STEP (Greenfield) **
+
+    * TMDULU-009-A: MDU 1-15 Units: $54.00/LU
+    * TMDULU-009-B: MDU 16-30 Units: $52.00/LU
+    * TMDULU-009-C: MDU 31-50 Units: $46.00/LU
+    * TMDULU-009-D: MDU 51-99 Units: $45.00/LU
+    * TMDULU-009-E: MDU 100+ Units: $41.00/LU
+
+*   ** MDU SUPPORT SERVICES **
+
+    * TEMDU-011: MDU Meetings: $19.00/HR
+    * TMDULU-003: MDU Preparation Per Floor: $176.00/FL
+    * TMDULU-022: Security Adder: $32.00/LU
+
+*   ** MDU/DRYWALL & MOLDING WORK **
+
+    * TMDU094-A: Remove Molding (1-15 Units): $5.00/LU
+    * TMDU094-B: Remove Molding (16-30 Units): $4.00/LU
+    * TMDU094-C: Remove Molding (31-50 Units): $4.00/LU
+    * TMDU094-D: Remove Molding (51-99 Units): $3.00/LU
+    * TMDU094-E: Remove Molding (100+ Units): $3.00/LU
+    * TMDU095-A: Place New Molding (Standard): $0.70/FT
+    * TMDU095-B: Place New Molding (Reduced): $0.35/FT
+    * TMDU096-A: Drywall Repair 8"x8" to 12"x12" (1-9 Cut-outs): $14.00/EA
+    * TMDU096-B: Drywall Repair 8"x8" to 12"x12" (10+ Cut-outs): $12.00/EA
+    * TMDU096-C: Drywall Repair 13"x13" to 18"x18" (1-9 Cut-outs): $16.00/EA
+    * TMDU096-D: Drywall Repair 13"x13" to 18"x18" (10+ Cut-outs): $13.00/EA
+
+*   ** CORE BORE SERVICES (Small Holes: ≤2.5") **
+
+    * TMDU-013-A: Core Bore - Below 2.5" Diameter (>12" Material, 1-9 Holes): $32.00/EA
+    * TMDU-014-A: Core Bore - Below 2.5" Diameter (>12" Material, 10+ Holes): $27.00/EA
+
+*   ** CORE BORE SERVICES (Medium Holes: 2.5"-4.0") **
+
+    * TMDU-013: Core Bore - 2.5" to 4.0" Diameter (≤24" Material, 1-9 Holes): $32.00/EA
+    * TMDU-014: Core Bore - 2.5" to 4.0" Diameter (≤24" Material, 10+ Holes): $27.00/EA
+    * TMDU-021: Core Bore - 2.5" to 4.0" Diameter (24.1"-36.0" Material, 1-9 Holes): $35.00/EA
+    * TMDU-022: Core Bore - 2.5" to 4.0" Diameter (24.1"-36.0" Material, 10+ Holes): $30.00/EA
+    * TMDU-029: Core Bore - 2.5" to 4.0" Diameter (>36.1" Material, 1-9 Holes): $45.00/EA
+    * TMDU-030: Core Bore - 2.5" to 4.0" Diameter (>36.1" Material, 10+ Holes): $42.00/EA
+
+*   ** CORE BORE SERVICES (Large Holes: 4.1"-5.0") **
+
+    * TMDU-015: Core Bore - 4.1" to 5.0" Diameter (≤24" Material, 1-9 Holes): $34.00/EA
+    * TMDU-016: Core Bore - 4.1" to 5.0" Diameter (≤24" Material, 10+ Holes): $30.00/EA
+    * TMDU-023: Core Bore - 4.1" to 5.0" Diameter (24.1"-36.0" Material, 1-9 Holes): $44.00/EA
+    * TMDU-024: Core Bore - 4.1" to 5.0" Diameter (24.1"-36.0" Material, 10+ Holes): $41.00/EA
+    * TMDU-031: Core Bore - 4.1" to 5.0" Diameter (>36.1" Material, 1-9 Holes): $50.00/EA
+    * TMDU-032: Core Bore - 4.1" to 5.0" Diameter (>36.1" Material, 10+ Holes): $48.00/EA
+
+*   ** MDU ADDITIONAL SERVICES **
+
+    * TMBT: Place Hexatronic Yard Chamber/Toby2 Box: $10.00/EA
+    * TMDU-047: Place Terminal Box/Equipment/Storage Box: $7.00/EA
+    * TMDU-050A: Place Electrical Conduit EMT (With Turnkey Units): $1.50/FT
+    * TMDU-050B: Place Electrical Conduit EMT (Without Turnkey Units): $2.50/FT
+    * TMDU-054: Hand Rodding/Blown in Occupied Duct: $0.10/FT
+    * TMDU-055: Hand Rodding/Blown in Un-occupied Duct: $0.00/FT
+    * TMDU-066: Place Additional Wire/Cable/Fiber/Innerduct: $0.10/FT
+    * TMDU-069: Place Backboard & Provide Entrance Hole: $28.00/EA
+    * TMDU-075: Trip Charge (Crew Rate - 2 Men): $30.00/EA
+    * TMDU-076: Install Smooth Wall Innerduct: $0.70/FT
+
+*   ** GROUND PENETRATING RADAR SURVEY **
+
+    * TMDU-091: GPR Survey (1-9 Scans): $66.00/SCAN
+    * TMDU-092: GPR Survey (10+ Scans): $55.00/SCAN
+
+
 ## SECTION 7: CLOSEOUT & INVOICING REQUIREMENTS
 *   **Photo Deliverables**:
     *   Start of Day/End of Day Site Photos.
