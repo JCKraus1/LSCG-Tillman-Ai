@@ -788,78 +788,78 @@ const TillmanKnowledgeAssistant = () => {
     setIsLoading(true);
 
     try {
-      let projectDataContext = '';
-      
-      // ... Existing project data formatting logic ...
-      if (projectData && projectData.length > 0) {
-        projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
-        
-        const supervisorGroups: any = {};
-        projectData.forEach(project => {
-          const supervisor = project['Assigned Supervisor'] || 'Unassigned';
-          if (!supervisorGroups[supervisor]) {
-            supervisorGroups[supervisor] = [];
-          }
-          supervisorGroups[supervisor].push(project);
-        });
+let projectDataContext = '';
 
-        Object.keys(supervisorGroups).sort().forEach(supervisor => {
-          const projects = supervisorGroups[supervisor];
-          // Calculate Total Footage using 'Footage Remaining' preferred
-          const totalFootage = projects.reduce((sum: number, p: any) => {
-            let val = p['Footage Remaining'];
-            if (val === undefined || val === null || String(val).trim() === '') {
-                val = p['Footage UG'];
-            }
-            const footage = parseFootage(val);
-            return sum + footage;
-          }, 0);
-          
-          projectDataContext += `\n**${supervisor}**: ${projects.length} projects, ${totalFootage.toLocaleString()} ft remaining\nProjects: ${projects.map((p: any) => p['NTP Number']).join(', ')}\n`;
-        });
+if (projectData && projectData.length > 0) {
+  projectDataContext = `\n\n═══════════════════════════════════════════════════════════════════\n## LIVE PROJECT DATA (Last Updated: ${lastDataUpdate})\n\nI have access to current project data with ${projectData.length} active projects. Here's a summary:\n\n`;
+  
+  // Pre-calculate ALL totals BEFORE sending to Claude
+  const supervisorTotals: Record<string, {count: number, footage: number, projects: string[]}> = {};
 
-        projectDataContext += `\n\n**DETAILED PROJECT DATA:**\n`;
-        
-        projectData.forEach(project => {
-          const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
-          const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
-          const doorTagDate = project['Door Tag Date'] || 'N/A';
-          const locateDate = project['Locate Date'] || project['locate date'] || 'N/A';
-          const sowTsdDate = project['SOW TSD Date'] || project['sow tsd date'] || 'N/A';
-          const vendorAssignment = project['Vendor Assignment'] || project['vendor assignment'] || 'N/A';
-          const hhp = project['HHP'] || project['hhp'] || 'N/A';
-          const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
-          const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
-          
-          // Footage Logic for specific project details
-          const footageRemaining = project['Footage Remaining'] !== undefined ? project['Footage Remaining'] : project['Footage UG'];
+  projectData.forEach(project => {
+    const supervisor = project['Assigned Supervisor'] || 'Unassigned';
+    if (!supervisorTotals[supervisor]) {
+      supervisorTotals[supervisor] = { count: 0, footage: 0, projects: [] };
+    }
+    supervisorTotals[supervisor].count += 1;
+    supervisorTotals[supervisor].projects.push(project['NTP Number']);
+    
+    let val = project['Footage Remaining'];
+    if (val === undefined || val === null || String(val).trim() === '') {
+      val = project['Footage UG'];
+    }
+    supervisorTotals[supervisor].footage += parseFootage(val);
+  });
 
-          let locateDetailsStr = "No locate data found.";
-          if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
-             const tickets = project['LocateTickets'];
-             locateDetailsStr = tickets.map((l: any, idx: number) => {
-                 const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4]
-                    .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
-                    .join(', ');
-                 const fields = [];
-                 // Removed brackets [] from ticket numbers display
-                 if (ticketNums) fields.push(`Tickets: ${ticketNums}`);
-                 if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
-                 if (l.status && String(l.status).trim() !== '') fields.push(`Status: ${l.status}`);
-                 if (l.dueDate && String(l.dueDate).trim() !== '') fields.push(`Due: ${l.dueDate}`);
-                 if (l.expireDate && String(l.expireDate).trim() !== '') fields.push(`Expires: ${l.expireDate}`);
-                 if (l.area && String(l.area).trim() !== '') fields.push(`Area: ${l.area}`);
-                 if (l.company && String(l.company).trim() !== '') fields.push(`Company: ${l.company}`);
-                 if (l.notes && String(l.notes).trim() !== '') fields.push(`Notes: ${l.notes}`);
-                 return `Entry ${idx + 1}: ${fields.join(', ')}`;
-             }).join('\n');
-          }
+  // Build summary with PRE-CALCULATED numbers only
+  Object.keys(supervisorTotals).sort().forEach(supervisor => {
+    const total = supervisorTotals[supervisor];
+    projectDataContext += `\n**${supervisor}**: ${total.count} projects, ${total.footage.toLocaleString()} ft remaining\nProjects: ${total.projects.join(', ')}\n`;
+  });
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage Remaining: ${footageRemaining} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
-        });
-      } else {
-        projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
-      }
+  projectDataContext += `\n\n⚠️ CRITICAL SYSTEM NOTE: All totals above are PRE-CALCULATED by the system. Do NOT attempt to verify by adding numbers yourself.`;
+
+  // Add detailed project information
+  projectDataContext += `\n\n**DETAILED PROJECT DATA:**\n`;
+
+  projectData.forEach(project => {
+    const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
+    const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
+    const doorTagDate = project['Door Tag Date'] || 'N/A';
+    const locateDate = project['Locate Date'] || project['locate date'] || 'N/A';
+    const sowTsdDate = project['SOW TSD Date'] || project['sow tsd date'] || 'N/A';
+    const vendorAssignment = project['Vendor Assignment'] || project['vendor assignment'] || 'N/A';
+    const hhp = project['HHP'] || project['hhp'] || 'N/A';
+    const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
+    const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
+    
+    // Footage Logic for specific project details
+    const footageRemaining = project['Footage Remaining'] !== undefined ? project['Footage Remaining'] : project['Footage UG'];
+
+    let locateDetailsStr = "No locate data found.";
+    if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
+      const tickets = project['LocateTickets'];
+      locateDetailsStr = tickets.map((l: any, idx: number) => {
+        const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4]
+          .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
+          .join(', ');
+        const fields = [];
+        if (ticketNums) fields.push(`Tickets: ${ticketNums}`);
+        if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
+        if (l.status && String(l.status).trim() !== '') fields.push(`Status: ${l.status}`);
+        if (l.dueDate && String(l.dueDate).trim() !== '') fields.push(`Due: ${l.dueDate}`);
+        if (l.expireDate && String(l.expireDate).trim() !== '') fields.push(`Expires: ${l.expireDate}`);
+        if (l.area && String(l.area).trim() !== '') fields.push(`Area: ${l.area}`);
+        if (l.company && String(l.company).trim() !== '') fields.push(`Company: ${l.company}`);
+        if (l.notes && String(l.notes).trim() !== '') fields.push(`Notes: ${l.notes}`);
+        return `Entry ${idx + 1}: ${fields.join(', ')}`;
+      }).join('\n');
+    }
+
+    projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage Remaining: ${footageRemaining} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
+  });} else {
+  projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
+}
 
       // Keep existing knowledge base content
       const knowledgeBase = `
