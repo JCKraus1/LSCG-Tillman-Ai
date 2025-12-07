@@ -978,44 +978,70 @@ const TillmanKnowledgeAssistant = () => {
           projectDataContext += `\n**${supervisor}**: ${projects.length} projects, ${totalFootage.toLocaleString()} ft remaining\nProjects: ${projects.map((p: any) => p['NTP Number']).join(', ')}\n`;
         });
 
-        projectDataContext += `\n\n**DETAILED PROJECT DATA:**\n`;
+        // --- SMART TOKEN OPTIMIZATION FILTER ---
+        // Instead of dumping ALL projects into context, we filter based on user input.
+        // This prevents 429 Errors by keeping the context window small.
         
-        projectData.forEach(project => {
-          const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
-          const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
-          const doorTagDate = project['Door Tag Date'] || 'N/A';
-          const locateDate = project['Locate Date'] || project['locate date'] || 'N/A';
-          const sowTsdDate = project['SOW TSD Date'] || project['sow tsd date'] || 'N/A';
-          const vendorAssignment = project['Vendor Assignment'] || project['vendor assignment'] || 'N/A';
-          const hhp = project['HHP'] || project['hhp'] || 'N/A';
-          const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
-          const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
-          const permitDate = project['Permit Date'] || 'Received';
-          
-          // Footage Logic for specific project details
-          // STRICT RULE: Show what is in the column.
-          const footageRemaining = parseFootage(project['Footage Remaining']);
-          const footageTotal = parseFootage(project['Footage UG']);
-          const footageCompleted = Math.max(0, footageTotal - footageRemaining);
-          const percentComplete = footageTotal > 0 ? ((footageCompleted / footageTotal) * 100).toFixed(0) : '0';
-
-          let locateDetailsStr = "No locate data found.";
-          let locateJson: any[] = [];
-          if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
-             const tickets = project['LocateTickets'];
-             locateJson = tickets.map((l: any) => ({
-                 ticket: [l.ticket1, l.ticket2, l.ticket3, l.ticket4].filter(t => t).join(', '),
-                 phone: l.phone,
-                 status: l.status,
-                 due: l.dueDate,
-                 expires: l.expireDate,
-                 notes: l.notes
-             }));
-             locateDetailsStr = JSON.stringify(locateJson);
-          }
-
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Description: ${project['Description'] || 'Underground construction'} | Footage Total: ${footageTotal} | Footage Remaining: ${footageRemaining} | Footage Completed: ${footageCompleted} | Percent: ${percentComplete}% | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates Date: ${locateDate} | Vendor: ${vendorAssignment} | HHP: ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Permit: ${permitDate} \n  Locate JSON: ${locateDetailsStr}`;
+        const lowerInput = messageText.toLowerCase();
+        
+        // Filter projects based on NTP or Supervisor in the user's message
+        const relevantProjects = projectData.filter(p => {
+            const ntp = String(p['NTP Number'] || '').toLowerCase();
+            const sup = String(p['Assigned Supervisor'] || '').toLowerCase();
+            
+            // Only include if specific NTP or Supervisor is mentioned
+            // Minimum length check prevents false positives on short words
+            return (ntp.length > 3 && lowerInput.includes(ntp)) ||
+                   (sup.length > 3 && lowerInput.includes(sup));
         });
+
+        // Limit detail output to max 10 projects to safeguard tokens even if search is broad
+        const projectsToDetail = relevantProjects.slice(0, 10);
+
+        if (projectsToDetail.length > 0) {
+            projectDataContext += `\n\n**DETAILED PROJECT DATA (Contextual Matches Found):**\n`;
+            
+            projectsToDetail.forEach(project => {
+              const completionDate = project['Project Completion Date'] || project['Completion Date'] || 'N/A';
+              const sowCost = project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : 'N/A';
+              const doorTagDate = project['Door Tag Date'] || 'N/A';
+              const locateDate = project['Locate Date'] || project['locate date'] || 'N/A';
+              const sowTsdDate = project['SOW TSD Date'] || project['sow tsd date'] || 'N/A';
+              const vendorAssignment = project['Vendor Assignment'] || project['vendor assignment'] || 'N/A';
+              const hhp = project['HHP'] || project['hhp'] || 'N/A';
+              const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
+              const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
+              const permitDate = project['Permit Date'] || 'Received';
+              
+              // Footage Logic for specific project details
+              // STRICT RULE: Show what is in the column.
+              const footageRemaining = parseFootage(project['Footage Remaining']);
+              const footageTotal = parseFootage(project['Footage UG']);
+              const footageCompleted = Math.max(0, footageTotal - footageRemaining);
+              const percentComplete = footageTotal > 0 ? ((footageCompleted / footageTotal) * 100).toFixed(0) : '0';
+
+              let locateDetailsStr = "No locate data found.";
+              let locateJson: any[] = [];
+              if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
+                 const tickets = project['LocateTickets'];
+                 locateJson = tickets.map((l: any) => ({
+                     ticket: [l.ticket1, l.ticket2, l.ticket3, l.ticket4].filter(t => t).join(', '),
+                     phone: l.phone,
+                     status: l.status,
+                     due: l.dueDate,
+                     expires: l.expireDate,
+                     notes: l.notes
+                 }));
+                 locateDetailsStr = JSON.stringify(locateJson);
+              }
+
+              projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Description: ${project['Description'] || 'Underground construction'} | Footage Total: ${footageTotal} | Footage Remaining: ${footageRemaining} | Footage Completed: ${footageCompleted} | Percent: ${percentComplete}% | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates Date: ${locateDate} | Vendor: ${vendorAssignment} | HHP: ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Permit: ${permitDate} \n  Locate JSON: ${locateDetailsStr}`;
+            });
+        } else {
+            // No details added if no specific project asked for. Keeps prompt tiny.
+            projectDataContext += `\n\n(Note: No specific project details loaded to save bandwidth. Ask for a project by NTP or Supervisor to see details.)`;
+        }
+
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
       }
@@ -2510,8 +2536,7 @@ ${knowledgeBase}`;
       setIsLoading(false);
     }
   };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
+const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
