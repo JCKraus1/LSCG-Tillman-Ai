@@ -1,10 +1,13 @@
-const CACHE_NAME = 'nexus-v2';
+const CACHE_NAME = 'nexus-v1';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',
   './index.tsx',
   './index.css',
-  './LSCG_Logo_White_transparentbackground.png'
+  './LSCG_Logo_White_transparentbackground.png',
+  'https://cdn.tailwindcss.com',
+  'https://unpkg.com/@babel/standalone/babel.min.js',
+  'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'
 ];
 
 // Install Event - Cache App Shell
