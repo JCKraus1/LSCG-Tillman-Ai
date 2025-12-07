@@ -146,8 +146,8 @@ const ProjectCard = ({ data }: { data: any }) => {
   const completed = data.footage?.completed || 0;
   const percent = total > 0 ? Math.min(100, Math.max(0, (completed / total) * 100)) : 0;
   
-  // Map query
-  const mapQuery = encodeURIComponent(`${data.address || ''} ${data.market || ''}`);
+  // Map query - Ensure we have something to search for
+  const mapQuery = encodeURIComponent(`${data.address || ''} ${data.market || ''} ${data.ntp || ''}`);
 
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden font-sans text-gray-800 w-full max-w-2xl mx-auto my-4 animate-fade-in">
@@ -156,7 +156,7 @@ const ProjectCard = ({ data }: { data: any }) => {
         <div>
           <h2 className="text-2xl font-bold text-gray-900">Project {data.ntp}</h2>
           <div className="flex items-center gap-2 mt-1">
-             <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${data.status?.toLowerCase().includes('clear') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
+             <span className={`px-2 py-0.5 rounded text-xs font-bold uppercase tracking-wider ${data.status?.toLowerCase().includes('clear') || data.status?.toLowerCase().includes('track') ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
                {data.status || 'Pending'}
              </span>
              <span className="text-sm text-gray-500">| ID: {data.ntp}</span>
@@ -182,7 +182,7 @@ const ProjectCard = ({ data }: { data: any }) => {
                 src={`https://maps.google.com/maps?q=${mapQuery}&output=embed`}
                 allowFullScreen
               ></iframe>
-              <div className="absolute bottom-2 left-2 bg-white/90 px-2 py-1 rounded shadow text-xs font-semibold">
+              <div className="absolute bottom-2 left-2 bg-white/90 px-2 py-1 rounded shadow text-xs font-semibold pointer-events-none">
                  {data.address || 'Location Area'}
               </div>
            </div>
@@ -858,16 +858,29 @@ const TillmanKnowledgeAssistant = () => {
     const content = message.content || "";
     
     // --- JSON PROJECT CARD RENDER LOGIC ---
-    try {
-        // Simple check before parsing to avoid overhead
-        if (content.trim().startsWith('{') && content.trim().endsWith('}')) {
-            const json = JSON.parse(content);
+    let jsonContent = content;
+    // Attempt to extract JSON from Markdown code blocks first
+    const jsonBlockMatch = content.match(/```json\n([\s\S]*?)\n```/) || content.match(/```\n([\s\S]*?)\n```/);
+    if (jsonBlockMatch) {
+        jsonContent = jsonBlockMatch[1];
+    }
+
+    // Try to parse JSON from the extracted content (or raw content)
+    // We look for the first '{' and the last '}' to handle any conversational preamble/postscript
+    const firstBrace = jsonContent.indexOf('{');
+    const lastBrace = jsonContent.lastIndexOf('}');
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        const potentialJson = jsonContent.substring(firstBrace, lastBrace + 1);
+        try {
+            const json = JSON.parse(potentialJson);
             if (json.type === 'project_card' && json.data) {
                 return <ProjectCard data={json.data} />;
             }
+        } catch (e) {
+            // console.warn("Failed to parse potential JSON card:", e);
+            // Proceed to standard text rendering if parsing fails
         }
-    } catch (e) {
-        // Not valid JSON, proceed to standard rendering
     }
     // --------------------------------------
 
@@ -992,39 +1005,37 @@ const TillmanKnowledgeAssistant = () => {
           const hhp = project['HHP'] || project['hhp'] || 'N/A';
           const dateAssigned = project['Date Assigned'] || project['date assigned'] || 'N/A';
           const projectStatus = project['On Track or In Jeopardy'] || 'N/A';
+          const permitDate = project['Permit Date'] || 'Received';
           
           // Footage Logic for specific project details
           // STRICT RULE: Show what is in the column.
           const footageRemaining = parseFootage(project['Footage Remaining']);
+          const footageTotal = parseFootage(project['Footage UG']);
+          const footageCompleted = Math.max(0, footageTotal - footageRemaining);
+          const percentComplete = footageTotal > 0 ? ((footageCompleted / footageTotal) * 100).toFixed(0) : '0';
 
           let locateDetailsStr = "No locate data found.";
+          let locateJson: any[] = [];
           if (project['LocateTickets'] && project['LocateTickets'].length > 0) {
              const tickets = project['LocateTickets'];
-             locateDetailsStr = tickets.map((l: any, idx: number) => {
-                 const ticketNums = [l.ticket1, l.ticket2, l.ticket3, l.ticket4]
-                    .filter(t => t !== undefined && t !== null && String(t).trim() !== '')
-                    .join(', ');
-                 const fields = [];
-                 // Removed brackets [] from ticket numbers display
-                 if (ticketNums) fields.push(`Tickets: ${ticketNums}`);
-                 if (l.phone && String(l.phone).trim() !== '') fields.push(`Phone: ${l.phone}`);
-                 if (l.status && String(l.status).trim() !== '') fields.push(`Status: ${l.status}`);
-                 if (l.dueDate && String(l.dueDate).trim() !== '') fields.push(`Due: ${l.dueDate}`);
-                 if (l.expireDate && String(l.expireDate).trim() !== '') fields.push(`Expires: ${l.expireDate}`);
-                 if (l.area && String(l.area).trim() !== '') fields.push(`Area: ${l.area}`);
-                 if (l.company && String(l.company).trim() !== '') fields.push(`Company: ${l.company}`);
-                 if (l.notes && String(l.notes).trim() !== '') fields.push(`Notes: ${l.notes}`);
-                 return `Entry ${idx + 1}: ${fields.join(', ')}`;
-             }).join('\n');
+             locateJson = tickets.map((l: any) => ({
+                 ticket: [l.ticket1, l.ticket2, l.ticket3, l.ticket4].filter(t => t).join(', '),
+                 phone: l.phone,
+                 status: l.status,
+                 due: l.dueDate,
+                 expires: l.expireDate,
+                 notes: l.notes
+             }));
+             locateDetailsStr = JSON.stringify(locateJson);
           }
 
-          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Footage Remaining: ${footageRemaining} | Complete: ${project['UG Percentage Complete']} | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates: ${locateDate} | Vendor: ${vendorAssignment} | HHP (SAs): ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} \n  Locate Tickets:\n${locateDetailsStr}`;
+          projectDataContext += `\n- **${project['NTP Number']}** | Supervisor: ${project['Assigned Supervisor']} | Status: ${project['Constuction Status']} | Health: ${projectStatus} | Area: ${project['AREA']} | Description: ${project['Description'] || 'Underground construction'} | Footage Total: ${footageTotal} | Footage Remaining: ${footageRemaining} | Footage Completed: ${footageCompleted} | Percent: ${percentComplete}% | Deadline (TSD): ${sowTsdDate} | Est Cost: ${sowCost} | Door Tag: ${doorTagDate} | Locates Date: ${locateDate} | Vendor: ${vendorAssignment} | HHP: ${hhp} | Assigned: ${dateAssigned} | Completion: ${completionDate} | Permit: ${permitDate} \n  Locate JSON: ${locateDetailsStr}`;
         });
       } else {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
       }
 
-      // Keep existing knowledge base content
+            // Keep existing knowledge base content
       const knowledgeBase = `
 TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
@@ -2387,31 +2398,77 @@ ${projectData && projectData.length > 0 ? "ONLINE - Project Data Available" : "O
 
 
 CRITICAL INSTRUCTIONS:
-1.  **IF PROJECT DATA IS OFFLINE**: You MUST NOT answer questions about specific project numbers, status, or supervisors.
-2.  **IF PROJECT DATA IS ONLINE**: Use the "LIVE PROJECT DATA" section to answer.
-3.  **Real-Time Data**: You have access to Google Search and Google Maps tools. Use them to find current weather, verify location data, or look up recent news affecting construction.
-4.  **Geolocation**: If the user asks about "this area" or "local weather", use the provided latitude/longitude in the tool config.
-5.  **Procedures**: Always use the knowledge base for procedure questions (BOM, NTP, Safety, etc.) regardless of data status.
-6.  **No Hallucinations**: NEVER invent project details. If a project isn't in the list, say so.
-7.  **Tone**: Professional but friendly.
-8.  **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant. **Do not start every response by stating your name. Only state it if asked.**
-9.  **Linking**: You MUST use Markdown [Title](URL) for links.
-10. **Locate Tickets Formatting**: When asked for locate tickets, you **MUST** use the following specific bulleted format for every ticket:
+1.  **JSON MODE FOR PROJECTS**: If the user asks about a SPECIFIC project (status, footage, locates, details), you **MUST** return a JSON object strictly following the schema below. 
+    *   **Do NOT wrap the JSON in markdown blocks (e.g. \`\`\`json).**
+    *   **Do NOT add conversational text before or after the JSON.**
+    *   **Just return the raw JSON string.**
+    
+    **JSON Schema:**
+    {
+      "type": "project_card",
+      "data": {
+        "ntp": "String (NTP Number)",
+        "status": "String (Health Status e.g. On Track)",
+        "supervisor": "String",
+        "market": "String",
+        "address": "String (City/Area)",
+        "description": "String",
+        "footage": {
+          "total": Number,
+          "remaining": Number,
+          "completed": Number,
+          "percent": Number
+        },
+        "dates": {
+          "assigned": "String",
+          "completion": "String",
+          "doorTag": "String",
+          "locates": "String",
+          "tsd": "String",
+          "permit": "String"
+        },
+        "financial": {
+          "cost": "String"
+        },
+        "stats": {
+          "hhp": "String"
+        },
+        "locates": [
+          { "ticket": "String", "phone": "String", "status": "String", "due": "String", "expires": "String", "notes": "String" }
+        ],
+        "notes": "String (Any additional context)"
+      }
+    }
+
+2.  **TEXT MODE**: For general questions (procedures, rate cards, "how do I...", weather), use standard Markdown text.
+3.  **IF PROJECT DATA IS OFFLINE**: You MUST NOT answer questions about specific project numbers, status, or supervisors.
+4.  **IF PROJECT DATA IS ONLINE**: Use the "LIVE PROJECT DATA" section to answer.
+5.  **Real-Time Data**: You have access to Google Search and Google Maps tools. Use them to find current weather, verify location data, or look up recent news affecting construction.
+6.  **Geolocation**: If the user asks about "this area" or "local weather", use the provided latitude/longitude in the tool config.
+7.  **Procedures**: Always use the knowledge base for procedure questions (BOM, NTP, Safety, etc.) regardless of data status.
+8.  **No Hallucinations**: NEVER invent project details. If a project isn't in the list, say so.
+9.  **Tone**: Professional but friendly.
+10. **Identity**: You are **Nexus**, the LSCG Tillman AI Assistant. **Do not start every response by stating your name. Only state it if asked.**
+11. **Linking**: You MUST use Markdown [Title](URL) for links.
+12. **Locate Tickets**: If returning JSON, parse the "Locate JSON" provided in the context into the \`locates\` array.
+13. **Math**: Use the provided "Footage Completed" and "Percent" values from the context. Do not recalculate.
+14. **Locate Tickets Formatting**: When asked for locate tickets, you **MUST** use the following specific bulleted format for every ticket:
     *   **Tickets:** [Ticket Number], Phone: [Phone Number], Status: [Status], Due: [Due Date], Expires: [Expire Date]
-11. **Rate Cards**: Distinguish between the "Standard Rate Card" (Internal), "Subcontractor Rate Card" (External), and "Employee Rate Card" (Internal). If a user asks for a rate, check all and clarify the difference.
-12. **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
-13. **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
-14. **New Data Fields**: 
+15. **Rate Cards**: Distinguish between the "Standard Rate Card" (Internal), "Subcontractor Rate Card" (External), and "Employee Rate Card" (Internal). If a user asks for a rate, check all and clarify the difference.
+16. **Roles**: Mention responsible roles (Project Coordinator, PM, etc.).
+17. **Specifics**: Cite exact timelines (e.g., 7 days restoration) and specs (e.g., 24" depth).
+18. **New Data Fields**: 
     *   **HHP**: Refers to "Serviceable Addresses" or "Households Passed".
     *   **SOW Estimated Cost**: The estimated cost for the project.
     *   **On Track or In Jeopardy**: The health status of the project.
-15. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
-16. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
-17. **Math & Totals**: The "LIVE PROJECT DATA" contains footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
-18. **Data Sources**:
+19. **LINKING RULES**: You **MUST** use Markdown format [Title](URL) for all links. Follow the mandatory linking rules in Section 16 of the Knowledge Base.
+20. **Locate Formatting**: **NEVER use Markdown Tables**. When listing locate tickets, use simple bullet points or a clear, vertical list. Use the phrase "Sunshine 8 1 1" (with spaces) when speaking, but "Sunshine 811" in text.
+21. **Math & Totals**: The "LIVE PROJECT DATA" contains footage totals per supervisor. **Always use these provided totals.** Do NOT attempt to manually add up long lists of numbers in your head, as this may lead to calculation errors. If a user asks for a total, refer to the provided summary first.
+22. **Data Sources**:
     *   **Footage Remaining Data**: STRICTLY derived from the "Footage Remaining" column in the project file. If empty, fall back to "Footage UG". NEVER use footage data from locate tickets.
     *   **Locate Tickets**: Sourced from the locate tickets file. You must output the Ticket Number provided in the data. If the data says "Tickets: 324501377", output that number.
     *   **Total Footage Data**: STRICTLY derived from the "Footage UG" column in the project file. NEVER use footage data from locate tickets.
+
 ${languageInstruction}
 
 KNOWLEDGE BASE & LIVE PROJECT DATA:
@@ -2453,7 +2510,8 @@ ${knowledgeBase}`;
 
       setMessages([...updatedMessages, assistantMessage]);
       
-      if (autoSpeak && text) {
+      // Auto-speak only if it's NOT a JSON card (simple check)
+      if (autoSpeak && text && !text.trim().startsWith('{')) {
         speakText(text);
       }
     } catch (error: any) {
@@ -2467,279 +2525,3 @@ ${knowledgeBase}`;
       setIsLoading(false);
     }
   };
-
-  const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  };
-
-  const quickQuestions = [
-    "Where do I find the maps for our projects?",
-    "What is the weather at the current location?",
-    "How do I setup Timestamp Camera?",
-    "Compare the TCBDB2 rate on both rate cards?",
-    "How do I submit a Close Out Package?",
-    "Show me details for project D-HNP108"
-  ];
-
-  return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-[#383e4b] to-[#000000] to-50% sm:to-100% bg-cover">
-      {/* Header */}
-      <div className="bg-gradient-to-r from-[#383e4b] to-[#000000] text-white p-4 shadow-lg header-buttons flex-none sticky top-0 z-10">
-        <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-2">
-          <div className="flex items-center gap-3">
-             <div className="h-10 w-auto flex items-center justify-center">
-                <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
-                <img src="./nexus-logo-master.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
-             </div>
-            <div>
-              <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
-              <p className="text-gray-300 text-xs hidden sm:block">AI-powered Construction & Project Intelligence</p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2">
-            <button 
-                onClick={() => {
-                   setLanguage(prev => prev === 'en' ? 'es' : 'en');
-                }}
-                className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all flex items-center gap-1"
-                title={language === 'en' ? "Switch to Spanish" : "Cambiar a Inglés"}
-            >
-                {language === 'en' ? '🇺🇸 EN' : '🇲🇽 ES'}
-            </button>
-            <button 
-                onClick={() => { setShowAnalytics(!showAnalytics); setShowDashboard(false); }} 
-                className={`p-2 rounded-full transition-all ${showAnalytics ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
-                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            </button>
-            <button 
-                onClick={() => { setShowDashboard(!showDashboard); setShowAnalytics(false); }} 
-                className={`p-2 rounded-full transition-all ${showDashboard ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
-                title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
-            </button>
-            <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title="Settings">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </button>
-            <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-2 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
-              {autoSpeak ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              )}
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Settings Modal */}
-      {showSettings && (
-        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 animate-fade-in no-print" onClick={() => setShowSettings(false)}>
-          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <div className="flex justify-between items-center border-b pb-3">
-              <h3 className="text-xl font-bold text-gray-800">Settings</h3>
-              <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-              </button>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Voice Selection</label>
-                <select 
-                  value={selectedVoiceName}
-                  onChange={handleVoiceChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
-                  <option value="">Default Voice</option>
-                  {availableVoices.map((voice) => (
-                    <option key={voice.name} value={voice.name}>
-                      {voice.name} ({voice.lang})
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Location Status</h4>
-                  <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${userLocation ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
-                      {userLocation ? (
-                          <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                            Location Active ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
-                          </>
-                      ) : (
-                          <>
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                             Location Not Detected (Enable for Weather/Maps)
-                          </>
-                      )}
-                  </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Chat Actions</label>
-                <div className="flex gap-2">
-                  <button 
-                    onClick={handleDownloadChat}
-                    className="flex-1 bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Save Transcript
-                  </button>
-                  <button 
-                    onClick={handlePrintChat}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                    Print Chat
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* API Key Error Banner */}
-      {apiKeyError && (
-        <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md no-print">
-          ⚠️ MISSING API KEY: The application cannot connect to Gemini. <br/>
-          If you are running on GitHub Pages, you must manually set your API key in the index.html file.
-        </div>
-      )}
-
-      {/* Data Load Error Banner */}
-      {dataLoadError && (
-        <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between no-print">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{dataLoadError}</span>
-          </div>
-          <button onClick={loadSheetJSAndFetchData} className="text-red-700 underline font-semibold hover:text-red-900">Retry</button>
-        </div>
-      )}
-
-      {/* Analytics Dashboard View */}
-      {showAnalytics && (
-         <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
-            <ProjectAnalytics projectData={projectData || []} />
-         </div>
-      )}
-
-      {/* External Dashboard View */}
-      {showDashboard && (
-        <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
-          <ExternalDashboard />
-        </div>
-      )}
-
-      {/* Quick Questions */}
-      {messages.length === 1 && !showDashboard && !showAnalytics && (
-        <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print flex-none">
-          <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {quickQuestions.map((question, idx) => (
-              <button key={idx} onClick={() => sendMessage(question)} className="text-left p-3 bg-white rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition-all border border-gray-200 text-sm animate-fade-in" style={{animationDelay: `${idx * 100}ms`}}>
-                <svg className="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                {question}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 chat-container bg-[#f3f4f6] w-full">
-        <div className="max-w-4xl mx-auto space-y-4 pb-20">
-          {messages.map((message, idx) => (
-            <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper animate-message`}>
-              <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 assistant-message rounded-bl-none'} ${(message.content || "").trim().startsWith('{') ? 'bg-transparent border-0 shadow-none px-0 py-0' : ''}`}>
-                <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                   {message.role === 'assistant' ? renderMessageContent(message) : message.content}
-                </div>
-                
-                {message.role === 'assistant' && idx === messages.length - 1 && !isLoading && !(message.content || "").trim().startsWith('{') && (
-                  <div className="mt-2 flex items-center gap-3 no-print">
-                      <button onClick={() => speakText(message.content)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                        {language === 'es' ? "Leer en voz alta" : "Read aloud"}
-                      </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
-          {isLoading && (
-            <div className="flex justify-start no-print animate-message">
-              <div className="bg-white rounded-2xl rounded-bl-none px-5 py-4 shadow-sm border border-gray-200 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
-              </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print flex-none sticky bottom-0 z-10">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex gap-2 items-end">
-            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`} title={isListening ? 'Stop listening' : 'Click to speak'}>
-              {isListening ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-              )}
-            </button>
-            <div className="flex-1 relative">
-              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? (language === 'es' ? "Escuchando..." : "Listening...") : (language === 'es' ? "Escribe tu pregunta o habla..." : "Type your question or click the microphone to speak...")} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
-            </div>
-            <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none" title="Send message">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
-            </button>
-          </div>
-          {isListening && (
-            <p className="text-sm text-red-600 mt-2 flex items-center gap-2 animate-pulse justify-center sm:justify-start">
-              <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-              {language === 'es' ? "Escuchando... Di tu pregunta ahora" : "Listening... Speak your question now"}
-            </p>
-          )}
-          {isSpeaking && (
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-sm text-blue-600 flex items-center gap-2">
-                <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                {language === 'es' ? "Hablando..." : "Speaking response..."}
-              </p>
-              <button onClick={stopSpeaking} className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                Stop
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
-        <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap text-center">
-          <span>{language === 'es' ? "💡 Pregunta sobre procedimientos, clima, tarifas o datos del proyecto" : "💡 Ask about procedures, weather, rates, or live project data"}</span>
-          <span className="hidden sm:inline">•</span>
-          <span>🎤 Voice works in Chrome & Edge</span>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const root = createRoot(document.getElementById("root")!);
-root.render(<TillmanKnowledgeAssistant />);
