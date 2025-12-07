@@ -172,22 +172,7 @@ const ProjectCard = ({ data }: { data: any }) => {
         
         {/* Left Column: Map & Scope */}
         <div className="space-y-4">
-           {/* Embedded Map */}
-           <div className="w-full h-48 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 relative group">
-              <iframe 
-                width="100%" 
-                height="100%" 
-                frameBorder="0" 
-                style={{border:0}} 
-                src={`https://maps.google.com/maps?q=${mapQuery}&output=embed`}
-                allowFullScreen
-              ></iframe>
-              <div className="absolute bottom-2 left-2 bg-white/90 px-2 py-1 rounded shadow text-xs font-semibold pointer-events-none">
-                 {data.address || 'Location Area'}
-              </div>
-           </div>
-
-           <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
+            <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
               <p className="text-xs text-gray-500 uppercase font-bold mb-1">Scope of Work</p>
               <p className="text-sm text-gray-700 line-clamp-3">
                  Market: {data.market}<br/>
