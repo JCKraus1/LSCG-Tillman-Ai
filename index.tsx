@@ -41,10 +41,13 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
     const status = p['On Track or In Jeopardy'] || 'Unknown';
     statusCounts[status] = (statusCounts[status] || 0) + 1;
 
-    // Footage by Market - Updated to strictly use Footage Remaining
+    // Footage by Market - Updated to prefer Footage Remaining as per user request
     const market = p['Market'] || 'General';
-    // STRICT RULE: Only use 'Footage Remaining'. Do not fallback to 'Footage UG'.
+    // Check for Footage Remaining first, fallback to Footage UG
     let rawFootage = p['Footage Remaining'];
+    if (rawFootage === undefined || rawFootage === null || String(rawFootage).trim() === '') {
+        rawFootage = p['Footage UG'];
+    }
     const footage = parseFootage(rawFootage);
     marketFootage[market] = (marketFootage[market] || 0) + footage;
   });
@@ -107,7 +110,7 @@ const ProjectAnalytics = ({ projectData }: { projectData: any[] }) => {
 
         {/* Chart 3: Footage by Market */}
         <div className="h-[300px] w-full bg-gray-50 rounded-lg p-2 border">
-          <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Total Footage Remaining by Market</h3>
+          <h3 className="text-sm font-semibold text-gray-600 mb-2 text-center">Total Footage by Market</h3>
           <ResponsiveContainer width="100%" height="100%">
             <AreaChart data={marketData} margin={{ top: 10, right: 30, left: 0, bottom: 60 }}>
               <CartesianGrid strokeDasharray="3 3" />
@@ -146,9 +149,6 @@ const ProjectCard = ({ data }: { data: any }) => {
   const completed = data.footage?.completed || 0;
   const percent = total > 0 ? Math.min(100, Math.max(0, (completed / total) * 100)) : 0;
   
-  // Map query - Ensure we have something to search for
-  const mapQuery = encodeURIComponent(`${data.address || ''} ${data.market || ''} ${data.ntp || ''}`);
-
   return (
     <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden font-sans text-gray-800 w-full max-w-2xl mx-auto my-4 animate-fade-in">
       {/* Header */}
@@ -170,7 +170,7 @@ const ProjectCard = ({ data }: { data: any }) => {
 
       <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Left Column: Map & Scope */}
+        {/* Left Column: Scope (Map Removed) */}
         <div className="space-y-4">
             <div className="bg-gray-50 p-3 rounded-lg border border-gray-100">
               <p className="text-xs text-gray-500 uppercase font-bold mb-1">Scope of Work</p>
