@@ -2732,7 +2732,7 @@ ${knowledgeBase}`;
       </div>
     </div>
   );
-};
+};  
 
 const root = createRoot(document.getElementById("root")!);
 root.render(<TillmanKnowledgeAssistant />);
