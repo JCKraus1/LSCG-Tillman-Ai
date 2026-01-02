@@ -35,9 +35,6 @@
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
     
-    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    .animate-spin { animation: spin 1s linear infinite; }
-    
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(10px); }
       to { opacity: 1; transform: translateY(0); }
@@ -53,35 +50,23 @@
       .no-print, .input-area, .header-buttons, button { display: none !important; }
       .chat-container { overflow: visible !important; height: auto !important; }
       .message-bubble { border: 1px solid #ddd; box-shadow: none !important; color: black !important; background: white !important; page-break-inside: avoid; }
-      .user-message { font-weight: bold; }
-      ::-webkit-scrollbar { display: none; }
     }
   </style>
-
-  <script>
-    if (typeof process === 'undefined') {
-      window.process = {
-        env: {
-          API_KEY: 'AIzaSyCkQrF3-_DWIBekZ-4UK97Ojz6-UXX9-o0' 
-        }
-      };
-    }
-  </script>
 
   <script type="importmap">
 {
   "imports": {
-    "react": "https://esm.sh/react@18.2.0",
-    "react-dom/client": "https://esm.sh/react-dom@18.2.0/client",
-    "react-dom": "https://esm.sh/react-dom@18.2.0",
+    "react": "https://esm.sh/react@18.3.1",
+    "react-dom/client": "https://esm.sh/react-dom@18.3.1/client",
+    "react-dom": "https://esm.sh/react-dom@18.3.1",
     "@google/genai": "https://esm.sh/@google/genai",
     "recharts": "https://esm.sh/recharts@2.12.3?external=react,react-dom",
     "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
-    "vite": "https://esm.sh/vite@^7.3.0",
-    "react/": "https://esm.sh/react@^19.2.3/",
-    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
-    "path": "https://esm.sh/path@^0.12.7"
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "path": "https://esm.sh/path@^0.12.7",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2"
   }
 }
 </script>
