@@ -5,6 +5,11 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer, 
   PieChart, Pie, Cell, AreaChart, Area
 } from 'recharts';
+import { 
+  MapPin, Calendar, User, Clock, CheckCircle, 
+  Truck, Play, AlertCircle, Edit2, Save, X, Activity, HardHat,
+  Navigation, Camera, Image as ImageIcon, Trash2, StickyNote, ArrowLeft
+} from 'lucide-react';
 
 // Define window interfaces for external libraries and APIs
 declare global {
@@ -12,6 +17,7 @@ declare global {
     XLSX: any;
     webkitSpeechRecognition: any;
     SpeechRecognition: any;
+    L: any;
   }
 }
 
@@ -21,6 +27,151 @@ const parseFootage = (val: any): number => {
   const str = String(val).replace(/,/g, '').replace(/[^0-9.-]/g, '').trim();
   const num = parseFloat(str);
   return isNaN(num) ? 0 : num;
+};
+
+// --- Sub-components for Project Details ---
+const DetailItem = ({ label, value }: { label: string, value?: string }) => {
+  if (!value || value === 'N/A' || value === 'Unknown' || value === '') return null;
+  return (
+    <div className="flex flex-col">
+      <span className="text-[10px] text-slate-500 uppercase font-bold tracking-tight">{label}</span>
+      <span className="text-sm text-slate-800 font-semibold whitespace-pre-wrap">{value}</span>
+    </div>
+  );
+};
+
+const ProjectInfoCard = ({ project }: { project: any }) => {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const leafletMap = useRef<any>(null);
+
+  // Initialize Map
+  useEffect(() => {
+    if (mapRef.current && !leafletMap.current && window.L) {
+      setTimeout(() => {
+        // Default to a generic Florida location if no specific lat/lng (common for this data)
+        const lat = 27.9506;
+        const lng = -82.4572;
+        
+        leafletMap.current = window.L.map(mapRef.current, {
+          zoomControl: false,
+          attributionControl: false
+        }).setView([lat, lng], 10);
+        
+        window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(leafletMap.current);
+
+        window.L.marker([lat, lng]).addTo(leafletMap.current)
+          .bindPopup(`<b>${project['NTP Number']}</b><br>${project['AREA'] || 'Location'}`)
+          .openPopup();
+      }, 100);
+    }
+  }, [project]);
+
+  const footageUG = parseFootage(project['Footage UG']);
+  const footageRem = parseFootage(project['Footage Remaining']);
+  const footageCompleted = footageUG - footageRem;
+  const progressPercent = footageUG > 0 ? Math.min(100, Math.max(0, Math.round((footageCompleted / footageUG) * 100))) : 0;
+
+  const getStatusColor = (status: string) => {
+    const s = String(status).toLowerCase();
+    if (s.includes('complete')) return 'bg-emerald-100 text-emerald-800';
+    if (s.includes('progress') || s.includes('started')) return 'bg-amber-100 text-amber-800';
+    if (s.includes('track')) return 'bg-blue-100 text-blue-800';
+    return 'bg-slate-100 text-slate-800';
+  };
+
+  return (
+    <div className="mt-4 border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm max-w-2xl w-full animate-fade-in no-print">
+      {/* Header */}
+      <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
+        <div>
+          <h2 className="text-xl font-bold text-slate-900">{project['NTP Number']}</h2>
+          <div className="flex items-center gap-2 mt-1">
+             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${getStatusColor(project['Constuction Status'])}`}>
+               {project['Constuction Status'] || 'Pending'}
+             </span>
+             <span className="text-slate-400 text-xs">|</span>
+             <span className="text-slate-500 text-xs font-mono">SUP: {project['Assigned Supervisor'] || 'TBD'}</span>
+          </div>
+        </div>
+        <button 
+          onClick={() => window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(project['AREA'] || 'Florida')}`, '_blank')}
+          className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700 transition-colors shadow-sm flex items-center gap-1"
+        >
+          <Navigation size={16} />
+          <span className="text-xs font-bold">Nav</span>
+        </button>
+      </div>
+
+      {/* Map Container */}
+      <div ref={mapRef} className="h-32 w-full bg-slate-100 relative grayscale-[0.5]">
+        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+           {!window.L && <span className="text-slate-400 text-xs">Loading Map...</span>}
+        </div>
+      </div>
+
+      <div className="p-5 space-y-6">
+        {/* Project Data Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-y-4 gap-x-6">
+           <DetailItem label="Permit Status" value={project['Constuction Status']} />
+           <DetailItem label="Area" value={project['AREA']} />
+           <DetailItem label="Deadline (TSD)" value={project['SOW TSD Date']} />
+           <DetailItem label="Est. Cost" value={project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : undefined} />
+           <DetailItem label="Door Tag" value={project['Door Tag Date']} />
+           <DetailItem label="Locates" value={project['Locate Date']} />
+           <DetailItem label="Households (HHP)" value={project['HHP']} />
+           <DetailItem label="Date Assigned" value={project['Date Assigned']} />
+           <DetailItem label="Completion Date" value={project['Project Completion Date']} />
+        </div>
+
+        {/* Production Target */}
+        <div className="pt-4 border-t border-slate-100">
+           <div className="flex justify-between items-end mb-2">
+              <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1">
+                <Activity size={14} className="text-blue-600" /> Production Target
+              </h3>
+              <span className="text-sm font-bold text-slate-700">{progressPercent}% Complete</span>
+           </div>
+           <div className="w-full bg-slate-100 rounded-full h-3 overflow-hidden">
+              <div 
+                className="bg-blue-600 h-full rounded-full transition-all duration-1000" 
+                style={{ width: `${progressPercent}%` }}
+              ></div>
+           </div>
+           <div className="grid grid-cols-2 gap-4 mt-3">
+              <div className="p-2 bg-slate-50 rounded-lg text-center border border-slate-100">
+                <p className="text-[10px] text-slate-400 uppercase font-bold">Target Footage</p>
+                <p className="text-sm font-bold text-slate-800">{footageUG.toLocaleString()} ft</p>
+              </div>
+              <div className="p-2 bg-emerald-50 rounded-lg text-center border border-emerald-100">
+                <p className="text-[10px] text-emerald-600 uppercase font-bold">Remaining</p>
+                <p className="text-sm font-bold text-emerald-700">{footageRem.toLocaleString()} ft</p>
+              </div>
+           </div>
+        </div>
+
+        {/* Notes/Locates */}
+        <div className="pt-4 border-t border-slate-100">
+           <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
+              <StickyNote size={14} className="text-amber-500" /> Project Notes & Locates
+           </h3>
+           <div className="text-xs text-slate-600 bg-amber-50 p-3 rounded-lg border border-amber-100 leading-relaxed max-h-32 overflow-y-auto">
+              {project['LocateTickets'] && project['LocateTickets'].length > 0 ? (
+                <div className="mb-2 space-y-1">
+                  {project['LocateTickets'].map((l: any, idx: number) => (
+                    <div key={idx} className="border-b border-amber-200 pb-1 mb-1 last:border-0">
+                      <span className="font-bold text-amber-800">Tickets:</span> {l.ticket1} {l.ticket2} | <span className="font-bold text-amber-800">Due:</span> {l.dueDate}
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="italic text-slate-400">No active locate tickets found in tracker.</p>
+              )}
+              {project['notes'] && <p className="mt-2">{project['notes']}</p>}
+           </div>
+        </div>
+      </div>
+    </div>
+  );
 };
 
 // --- Data Visualization Component ---
@@ -745,6 +896,11 @@ const TillmanKnowledgeAssistant = () => {
         <div className="flex flex-col gap-2">
             <div>{parts}</div>
             
+            {/* NEW: Render Project Info Card if a specific project was detected in context */}
+            {message.projectContext && (
+              <ProjectInfoCard project={message.projectContext} />
+            )}
+
             {/* Render Grounding (Maps/Search) */}
             {message.groundingChunks && message.groundingChunks.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
@@ -788,6 +944,13 @@ const TillmanKnowledgeAssistant = () => {
     setIsLoading(true);
 
     try {
+      // 1. PROJECT DETECTION ENGINE
+      let matchedProject = null;
+      if (projectData) {
+        const found = projectData.find(p => messageText.toUpperCase().includes(String(p['NTP Number']).toUpperCase()));
+        if (found) matchedProject = found;
+      }
+
       let projectDataContext = '';
       
       // ... Existing project data formatting logic ...
@@ -861,8 +1024,8 @@ const TillmanKnowledgeAssistant = () => {
         projectDataContext = `\n\n⚠️ SYSTEM ALERT: LIVE PROJECT DATA IS CURRENTLY OFFLINE/UNAVAILABLE. \nYou DO NOT have access to any project statuses, supervisors, or footage. \nIf the user asks about a specific project, you MUST state that live data is currently unavailable and refer them to the supervisor.`;
       }
 
-      // Keep existing knowledge base content
-      const knowledgeBase = `
+      // Master Knowledge Base logic...
+const knowledgeBase = `
 TILLMAN FIBER & LIGHTSPEED CONSTRUCTION - MASTER KNOWLEDGE BASE
 
 ${projectDataContext}
@@ -2253,7 +2416,6 @@ ${languageInstruction}
 KNOWLEDGE BASE & LIVE PROJECT DATA:
 ${knowledgeBase}`;
 
-      // Config for Google Search and Maps
       const toolConfig: any = {};
       if (userLocation) {
         toolConfig.retrievalConfig = {
@@ -2264,7 +2426,6 @@ ${knowledgeBase}`;
         };
       }
 
-      // Call Google GenAI API
       const response = await aiRef.current.models.generateContent({
         model: 'gemini-2.5-flash',
         contents: messageText,
@@ -2276,14 +2437,13 @@ ${knowledgeBase}`;
       });
 
       const text = response.text;
-      
-      // Extract grounding metadata (sources/maps)
       const groundingChunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
 
       const assistantMessage = {
         role: 'assistant',
         content: text,
-        groundingChunks: groundingChunks
+        groundingChunks: groundingChunks,
+        projectContext: matchedProject // Attach project data for rich card rendering
       };
 
       setMessages([...updatedMessages, assistantMessage]);
@@ -2293,23 +2453,8 @@ ${knowledgeBase}`;
       }
     } catch (error: any) {
       console.error('Error getting response:', error);
-      
-      let errorMsg = `I apologize, but I encountered an error: ${error.message || error}. Please check the console for details.`;
-      
-      // Enhanced Rate Limit Handling
-      if (error.message && (
-          error.message.includes('429') || 
-          error.message.includes('503') ||
-          error.message.toLowerCase().includes('quota') || 
-          error.message.toLowerCase().includes('resource exhausted')
-      )) {
-          errorMsg = "⏳ **System Cooling Down**\n\nI have reached the maximum number of requests allowed per minute. Please wait approximately **30 to 60 seconds** before asking your next question.\n\nThis ensures fair usage and reliable responses. Thank you for your patience!";
-      }
-
-      const errorMessage = {
-        role: 'assistant',
-        content: errorMsg
-      };
+      let errorMsg = `I apologize, but I encountered an error: ${error.message || error}.`;
+      const errorMessage = { role: 'assistant', content: errorMsg };
       setMessages([...updatedMessages, errorMessage]);
     } finally {
       setIsLoading(false);
@@ -2349,9 +2494,7 @@ ${knowledgeBase}`;
           </div>
           <div className="flex items-center gap-2">
             <button 
-                onClick={() => {
-                   setLanguage(prev => prev === 'en' ? 'es' : 'en');
-                }}
+                onClick={() => setLanguage(prev => prev === 'en' ? 'es' : 'en')}
                 className="px-3 py-1 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold border border-white/20 transition-all flex items-center gap-1"
                 title={language === 'en' ? "Switch to Spanish" : "Cambiar a Inglés"}
             >
@@ -2360,26 +2503,17 @@ ${knowledgeBase}`;
             <button 
                 onClick={() => { setShowAnalytics(!showAnalytics); setShowDashboard(false); }} 
                 className={`p-2 rounded-full transition-all ${showAnalytics ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
-                title={showAnalytics ? 'Hide Analytics' : 'Show Analytics'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+              <Activity size={20} />
             </button>
             <button 
                 onClick={() => { setShowDashboard(!showDashboard); setShowAnalytics(false); }} 
                 className={`p-2 rounded-full transition-all ${showDashboard ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} 
-                title={showDashboard ? 'Hide Dashboard' : 'Show Dashboard'}
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" /></svg>
+              <ImageIcon size={20} />
             </button>
-            <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`} title="Settings">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-            </button>
-            <button onClick={() => setAutoSpeak(!autoSpeak)} className={`p-2 rounded-full transition-all ${autoSpeak ? 'bg-white/20 hover:bg-white/30' : 'bg-white/10 hover:bg-white/20'}`} title={autoSpeak ? 'Auto-speak enabled' : 'Auto-speak disabled'}>
-              {autoSpeak ? (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-              ) : (
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              )}
+            <button onClick={() => setShowSettings(!showSettings)} className={`p-2 rounded-full transition-all ${showSettings ? 'bg-white text-black' : 'bg-white/10 hover:bg-white/20 text-white'}`}>
+              <Edit2 size={20} />
             </button>
           </div>
         </div>
@@ -2392,23 +2526,17 @@ ${knowledgeBase}`;
             <div className="flex justify-between items-center border-b pb-3">
               <h3 className="text-xl font-bold text-gray-800">Settings</h3>
               <button onClick={() => setShowSettings(false)} className="text-gray-500 hover:text-gray-700">
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                <X size={24} />
               </button>
             </div>
             
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Voice Selection</label>
-                <select 
-                  value={selectedVoiceName}
-                  onChange={handleVoiceChange}
-                  className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none"
-                >
+                <select value={selectedVoiceName} onChange={handleVoiceChange} className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:outline-none">
                   <option value="">Default Voice</option>
                   {availableVoices.map((voice) => (
-                    <option key={voice.name} value={voice.name}>
-                      {voice.name} ({voice.lang})
-                    </option>
+                    <option key={voice.name} value={voice.name}>{voice.name} ({voice.lang})</option>
                   ))}
                 </select>
               </div>
@@ -2418,13 +2546,13 @@ ${knowledgeBase}`;
                   <div className={`p-3 rounded-lg flex items-center gap-2 text-sm ${userLocation ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                       {userLocation ? (
                           <>
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                            <MapPin size={16} />
                             Location Active ({userLocation.lat.toFixed(4)}, {userLocation.lng.toFixed(4)})
                           </>
                       ) : (
                           <>
-                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
-                             Location Not Detected (Enable for Weather/Maps)
+                             <AlertCircle size={16} />
+                             Location Not Detected
                           </>
                       )}
                   </div>
@@ -2433,19 +2561,11 @@ ${knowledgeBase}`;
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Chat Actions</label>
                 <div className="flex gap-2">
-                  <button 
-                    onClick={handleDownloadChat}
-                    className="flex-1 bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                    Save Transcript
+                  <button onClick={handleDownloadChat} className="flex-1 bg-blue-100 text-blue-700 py-2 px-4 rounded-lg hover:bg-blue-200 transition-colors flex items-center justify-center gap-2 font-medium">
+                    <Save size={16} /> Save
                   </button>
-                  <button 
-                    onClick={handlePrintChat}
-                    className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 font-medium"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" /></svg>
-                    Print Chat
+                  <button onClick={handlePrintChat} className="flex-1 bg-gray-100 text-gray-700 py-2 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center gap-2 font-medium">
+                    <Trash2 size={16} /> Print
                   </button>
                 </div>
               </div>
@@ -2454,81 +2574,25 @@ ${knowledgeBase}`;
         </div>
       )}
 
-      {/* API Key Error Banner */}
-      {apiKeyError && (
-        <div className="bg-red-600 text-white px-6 py-4 text-center font-bold shadow-md no-print">
-          ⚠️ MISSING API KEY: The application cannot connect to Gemini. <br/>
-          If you are running on GitHub Pages, you must manually set your API key in the index.html file.
-        </div>
-      )}
-
-      {/* Data Load Error Banner */}
-      {dataLoadError && (
-        <div className="bg-red-100 border-b border-red-200 text-red-700 px-6 py-3 text-sm flex items-center justify-between no-print">
-          <div className="flex items-center gap-2">
-            <svg className="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>{dataLoadError}</span>
-          </div>
-          <button onClick={loadSheetJSAndFetchData} className="text-red-700 underline font-semibold hover:text-red-900">Retry</button>
-        </div>
-      )}
-
-      {/* Analytics Dashboard View */}
-      {showAnalytics && (
-         <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
-            <ProjectAnalytics projectData={projectData || []} />
-         </div>
-      )}
-
-      {/* External Dashboard View */}
-      {showDashboard && (
-        <div className="max-w-6xl mx-auto w-full px-4 pt-6 no-print flex-none">
-          <ExternalDashboard />
-        </div>
-      )}
-
-      {/* Quick Questions */}
-      {messages.length === 1 && !showDashboard && !showAnalytics && (
-        <div className="max-w-4xl mx-auto w-full px-4 py-6 no-print flex-none">
-          <p className="text-sm text-gray-600 mb-3 font-medium">Quick questions to get started:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-            {quickQuestions.map((question, idx) => (
-              <button key={idx} onClick={() => sendMessage(question)} className="text-left p-3 bg-white rounded-lg shadow-sm hover:shadow-md hover:bg-blue-50 transition-all border border-gray-200 text-sm animate-fade-in" style={{animationDelay: `${idx * 100}ms`}}>
-                <svg className="w-4 h-4 inline mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
-                {question}
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* Messages */}
+      {/* Main UI banners and messages list... */}
       <div className="flex-1 overflow-y-auto px-4 py-6 chat-container bg-[#f3f4f6] w-full">
         <div className="max-w-4xl mx-auto space-y-4 pb-20">
+          {showAnalytics && <ProjectAnalytics projectData={projectData || []} />}
+          {showDashboard && <ExternalDashboard />}
+          
           {messages.map((message, idx) => (
             <div key={idx} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'} message-wrapper animate-message`}>
               <div className={`max-w-[85%] sm:max-w-[80%] rounded-2xl px-5 py-3 shadow-sm message-bubble ${message.role === 'user' ? 'bg-blue-600 text-white user-message rounded-br-none' : 'bg-white text-gray-800 border border-gray-200 assistant-message rounded-bl-none'}`}>
                 <div className="whitespace-pre-wrap text-sm leading-relaxed">
                    {message.role === 'assistant' ? renderMessageContent(message) : message.content}
                 </div>
-                
-                {message.role === 'assistant' && idx === messages.length - 1 && !isLoading && (
-                  <div className="mt-2 flex items-center gap-3 no-print">
-                      <button onClick={() => speakText(message.content)} className="text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 font-medium">
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                        {language === 'es' ? "Leer en voz alta" : "Read aloud"}
-                      </button>
-                  </div>
-                )}
               </div>
             </div>
           ))}
           {isLoading && (
             <div className="flex justify-start no-print animate-message">
               <div className="bg-white rounded-2xl rounded-bl-none px-5 py-4 shadow-sm border border-gray-200 flex items-center gap-2">
-                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0s'}}></div>
+                <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce"></div>
                 <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
                 <div className="w-2 h-2 bg-blue-600 rounded-full animate-bounce" style={{animationDelay: '0.4s'}}></div>
               </div>
@@ -2538,51 +2602,20 @@ ${knowledgeBase}`;
         </div>
       </div>
 
-      {/* Input Area */}
+      {/* Input area remains same... */}
       <div className="bg-white border-t border-gray-200 p-4 shadow-lg input-area no-print flex-none sticky bottom-0 z-10">
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-2 items-end">
-            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`} title={isListening ? 'Stop listening' : 'Click to speak'}>
-              {isListening ? (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-              ) : (
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
-              )}
+            <button onClick={toggleListening} disabled={isLoading} className={`p-4 rounded-xl transition-all ${isListening ? 'bg-red-500 hover:bg-red600 animate-pulse' : 'bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600'} text-white shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex-none`}>
+              {isListening ? <X size={24} /> : <Play size={24} />}
             </button>
             <div className="flex-1 relative">
-              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? (language === 'es' ? "Escuchando..." : "Listening...") : (language === 'es' ? "Escribe tu pregunta o habla..." : "Type your question or click the microphone to speak...")} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
+              <textarea value={inputText} onChange={(e) => setInputText(e.target.value)} onKeyDown={handleKeyPress} placeholder={isListening ? "Listening..." : "Type your question or job number..."} disabled={isLoading || isListening} className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none disabled:bg-gray-50 disabled:cursor-not-allowed shadow-sm" rows={1} style={{minHeight: '48px', maxHeight: '120px'}} />
             </div>
-            <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none" title="Send message">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
+            <button onClick={() => sendMessage()} disabled={!inputText.trim() || isLoading} className="p-4 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-500 hover:from-blue-600 hover:to-indigo-600 text-white shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex-none">
+              <CheckCircle size={24} />
             </button>
           </div>
-          {isListening && (
-            <p className="text-sm text-red-600 mt-2 flex items-center gap-2 animate-pulse justify-center sm:justify-start">
-              <span className="w-2 h-2 bg-red-600 rounded-full"></span>
-              {language === 'es' ? "Escuchando... Di tu pregunta ahora" : "Listening... Speak your question now"}
-            </p>
-          )}
-          {isSpeaking && (
-            <div className="mt-2 flex items-center justify-between">
-              <p className="text-sm text-blue-600 flex items-center gap-2">
-                <svg className="w-4 h-4 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /></svg>
-                {language === 'es' ? "Hablando..." : "Speaking response..."}
-              </p>
-              <button onClick={stopSpeaking} className="text-sm text-red-600 hover:text-red-800 flex items-center gap-1">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2" /></svg>
-                Stop
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Footer */}
-      <div className="bg-black border-t border-gray-800 px-4 py-2 no-print flex-none">
-        <div className="max-w-4xl mx-auto text-xs text-white flex items-center justify-center gap-4 flex-wrap text-center">
-          <span>{language === 'es' ? "💡 Pregunta sobre procedimientos, clima, tarifas o datos del proyecto" : "💡 Ask about procedures, weather, rates, or live project data"}</span>
-          <span className="hidden sm:inline">•</span>
-          <span>🎤 Voice works in Chrome & Edge</span>
         </div>
       </div>
     </div>

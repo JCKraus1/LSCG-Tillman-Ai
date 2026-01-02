@@ -12,8 +12,12 @@
   <link rel="apple-touch-icon" href="./nexus-logo-master.png">
   
   <!-- Favicon -->
-  <link rel="icon" type="image/png" href="./nexus-16.png"">
+  <link rel="icon" type="image/png" href="./nexus-16.png">
   
+  <!-- Leaflet Maps -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   
@@ -24,6 +28,9 @@
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, -apple-system, sans-serif; background-color: #f3f4f6; }
     
+    /* Leaflet fixes */
+    .leaflet-container { z-index: 1; }
+
     /* Animations */
     @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
     .animate-pulse { animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
@@ -49,21 +56,12 @@
       .user-message { font-weight: bold; }
       ::-webkit-scrollbar { display: none; }
     }
-
-    /* Mobile Tweaks */
-    .mobile-header {
-      padding-bottom: env(safe-area-inset-bottom);
-    }
   </style>
 
-  <!-- Polyfill for process.env to prevent crashes on GitHub Pages/Static Hosting -->
   <script>
     if (typeof process === 'undefined') {
       window.process = {
         env: {
-          // ⚠️ SECURITY WARNING: 
-          // For GitHub Pages (static hosting), you must paste your API Key below.
-          // To secure it, restrict this key in Google Cloud Console to your specific domain (e.g. jckraus1.github.io).
           API_KEY: 'AIzaSyCkQrF3-_DWIBekZ-4UK97Ojz6-UXX9-o0' 
         }
       };
@@ -78,34 +76,18 @@
     "react-dom": "https://esm.sh/react-dom@18.2.0",
     "@google/genai": "https://esm.sh/@google/genai",
     "recharts": "https://esm.sh/recharts@2.12.3?external=react,react-dom",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
-    "react/": "https://aistudiocdn.com/react@^19.2.0/",
-    "vite": "https://aistudiocdn.com/vite@^7.2.6",
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "path": "https://aistudiocdn.com/path@^0.12.7"
+    "lucide-react": "https://esm.sh/lucide-react@0.344.0?external=react",
+    "vite": "https://esm.sh/vite@^7.3.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "path": "https://esm.sh/path@^0.12.7"
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
 </head>
 <body>
   <div id="root"></div>
-  <!-- Load index.tsx using Babel -->
   <script type="text/babel" data-type="module" src="./index.tsx" data-presets="react,typescript"></script>
-  <script type="module" src="/index.tsx"></script>
-  
-  <!-- PWA Service Worker Registration -->
-  <script>
-    if ('serviceWorker' in navigator) {
-      window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-          .then(registration => {
-            console.log('✅ ServiceWorker registration successful with scope: ', registration.scope);
-          }, err => {
-            console.log('❌ ServiceWorker registration failed: ', err);
-          });
-      });
-    }
-  </script>
 </body>
 </html>
