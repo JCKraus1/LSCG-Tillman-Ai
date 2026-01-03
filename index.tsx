@@ -118,7 +118,7 @@ const ProjectInfoCard = ({ project }: { project: any }) => {
            <DetailItem label="Est. Cost" value={project['SOW Estimated Cost'] ? `$${project['SOW Estimated Cost']}` : undefined} />
            <DetailItem label="Door Tag" value={project['Door Tag Date']} />
            <DetailItem label="Locates" value={project['Locate Date']} />
-           <DetailItem label="Households (HHP)" value={project['HHP']} />
+           <DetailItem label="Households (SA)" value={project['HHP']} />
            <DetailItem label="Date Assigned" value={project['Date Assigned']} />
            <DetailItem label="Completion Date" value={project['Project Completion Date']} />
         </div>
@@ -152,14 +152,14 @@ const ProjectInfoCard = ({ project }: { project: any }) => {
         {/* Notes/Locates */}
         <div className="pt-4 border-t border-slate-100">
            <h3 className="text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1">
-              <StickyNote size={14} className="text-amber-500" /> Project Notes & Locates
+              <StickyNote size={14} className="text-amber-500" /> Project Locate Tickets
            </h3>
            <div className="text-xs text-slate-600 bg-amber-50 p-3 rounded-lg border border-amber-100 leading-relaxed max-h-32 overflow-y-auto">
               {project['LocateTickets'] && project['LocateTickets'].length > 0 ? (
                 <div className="mb-2 space-y-1">
                   {project['LocateTickets'].map((l: any, idx: number) => (
                     <div key={idx} className="border-b border-amber-200 pb-1 mb-1 last:border-0">
-                      <span className="font-bold text-amber-800">Tickets:</span> {l.ticket1} {l.ticket2} | <span className="font-bold text-amber-800">Due:</span> {l.dueDate}
+                      <span className="font-bold text-amber-800">Tickets:</span> {l.ticket1} {l.ticket2} | <span className="font-bold text-amber-800">Phone:</span> {l.phone} | <span className="font-bold text-amber-800">Due:</span> {l.dueDate} | <span className="font-bold text-amber-800">Expire:</span> {l.expireDate}
                     </div>
                   ))}
                 </div>
