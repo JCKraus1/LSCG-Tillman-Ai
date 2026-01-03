@@ -2484,8 +2484,8 @@ ${knowledgeBase}`;
         <div className="max-w-4xl mx-auto flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
              <div className="h-10 w-auto flex items-center justify-center">
-                <img src="./LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
-                <img src="./nexus-logo-master.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
+                <img src="/LSCG_Logo_White_transparentbackground.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
+                <img src="/nexus-logo-master.png" alt="LSCG Logo" className="h-10 w-auto object-contain" />
              </div>
             <div>
               <h1 className="text-xl font-bold leading-tight">Nexus - LSCG Tillman Assistant</h1>
