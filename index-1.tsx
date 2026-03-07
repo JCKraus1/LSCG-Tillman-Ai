@@ -2266,7 +2266,7 @@ ${knowledgeBase}`;
 
       // Call Google GenAI API
       const response = await aiRef.current.models.generateContent({
-        model: 'gemini-2.5-flash',
+        model: 'gemini-3.1-flash-lite-preview',
         contents: messageText,
         config: {
           systemInstruction: systemInstruction,
